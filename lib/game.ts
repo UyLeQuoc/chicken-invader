@@ -603,6 +603,7 @@ export class Game {
   private getRandomPowerUpType(): PowerUp["type"] {
     const types: PowerUp["type"][] = [
       "weapon",
+      "weapon", // Increased weapon drop rate
       "shield",
       "health",
       "explosive",
@@ -783,13 +784,13 @@ export class Game {
         this.weaponLevel = Math.min(5, this.weaponLevel + 1)
         this.callbacks.onWeaponLevelUpdate(this.weaponLevel)
         break
-      case "health":
-        this.lives = Math.min(5, this.lives + 1)
-        this.callbacks.onLivesUpdate(this.lives)
-        break
       case "shield":
         this.shield = Math.min(5, this.shield + 1)
         this.callbacks.onShieldUpdate(this.shield)
+        break
+      case "health":
+        this.lives = Math.min(5, this.lives + 1)
+        this.callbacks.onLivesUpdate(this.lives)
         break
       case "explosive":
         this.explosiveBullets = true

@@ -13,7 +13,7 @@ export class Boss {
   private angle = 0
   private phase = 0
   private attackTimer = 0
-  private attackCooldown = 2000
+  private attackCooldown = 1500
   private movePattern = 0
   private moveTimer = 0
   private targetX = 0
@@ -27,7 +27,7 @@ export class Boss {
     this.targetX = x
     this.targetY = y
     this.type = type
-    this.maxHealth = 50 + level * 20
+    this.maxHealth = 30 + level * 12
     this.health = this.maxHealth
     this.name = [
       "COLONEL CLUCKSWORTH",
@@ -115,7 +115,11 @@ export class Boss {
       this.crossPattern.bind(this),
       this.randomPattern.bind(this),
       this.burstPattern.bind(this, playerX, playerY),
-    ][this.type % 8]
+      this.helix.bind(this),
+      this.spreadShot.bind(this, playerX, playerY),
+      this.chainShot.bind(this),
+      this.spiralAimed.bind(this, playerX, playerY),
+    ][this.type % 12]
 
     bullets.push(...basePattern())
 
@@ -125,10 +129,12 @@ export class Boss {
     }
     if (this.phase >= 2) {
       bullets.push(...this.aimedPattern(playerX, playerY))
+      bullets.push(...this.helix())
     }
     if (this.phase >= 3) {
       bullets.push(...this.circlePattern())
       bullets.push(...this.crossPattern())
+      bullets.push(...this.spreadShot(playerX, playerY))
     }
 
     return bullets
@@ -252,6 +258,71 @@ export class Boss {
           false,
         ),
       )
+    }
+    return bullets
+  }
+
+  private helix(): Bullet[] {
+    const bullets: Bullet[] = []
+    const count = 8 + this.phase * 3
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 4 + this.angle
+      const speed = 3.5 + this.phase * 0.5
+      bullets.push(new Bullet(this.x, this.y, Math.cos(angle) * speed, Math.sin(angle) * speed, "#ff00ff", 8, false))
+    }
+    return bullets
+  }
+
+  private spreadShot(playerX: number, playerY: number): Bullet[] {
+    const bullets: Bullet[] = []
+    const angle = Math.atan2(playerY - this.y, playerX - this.x)
+    const spreadCount = 7 + this.phase * 2
+    const spreadAngle = Math.PI / 4
+
+    for (let i = 0; i < spreadCount; i++) {
+      const offset = (i - spreadCount / 2) * (spreadAngle / spreadCount)
+      const speed = 4 + this.phase * 0.5
+      bullets.push(
+        new Bullet(
+          this.x,
+          this.y,
+          Math.cos(angle + offset) * speed,
+          Math.sin(angle + offset) * speed,
+          "#00ffff",
+          8,
+          false,
+        ),
+      )
+    }
+    return bullets
+  }
+
+  private chainShot(): Bullet[] {
+    const bullets: Bullet[] = []
+    const chains = 3 + this.phase
+    const bulletsPerChain = 4 + this.phase
+
+    for (let c = 0; c < chains; c++) {
+      const chainAngle = (c / chains) * Math.PI * 2
+      for (let i = 0; i < bulletsPerChain; i++) {
+        const speed = 2 + i * 0.5 + this.phase * 0.3
+        bullets.push(
+          new Bullet(this.x, this.y, Math.cos(chainAngle) * speed, Math.sin(chainAngle) * speed, "#ffaa00", 8, false),
+        )
+      }
+    }
+    return bullets
+  }
+
+  private spiralAimed(playerX: number, playerY: number): Bullet[] {
+    const bullets: Bullet[] = []
+    const baseAngle = Math.atan2(playerY - this.y, playerX - this.x)
+    const count = 10 + this.phase * 3
+
+    for (let i = 0; i < count; i++) {
+      const angle = baseAngle + (i / count) * Math.PI * 2 + this.angle * 0.5
+      const speed = 3 + this.phase * 0.5
+      bullets.push(new Bullet(this.x, this.y, Math.cos(angle) * speed, Math.sin(angle) * speed, "#ff6600", 8, false))
     }
     return bullets
   }

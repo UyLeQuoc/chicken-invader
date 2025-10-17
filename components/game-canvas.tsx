@@ -110,19 +110,19 @@ export function GameCanvas() {
         <div className="absolute top-3 left-3 right-3 flex justify-between items-start pointer-events-none">
           <div className="flex gap-2">
             {/* Score */}
-            <div className="bg-black/90 border-2 border-cyan-400/60 px-2.5 py-1 rounded font-mono text-cyan-400 backdrop-blur-sm shadow-lg">
-              <div className="text-[10px] opacity-60 leading-tight">SCORE</div>
-              <div className="text-base font-bold leading-tight">{score.toString().padStart(8, "0")}</div>
+            <div className="bg-black/90 border-2 border-cyan-400/60 px-2.5 py-1 rounded font-mono text-cyan-400 backdrop-blur-sm shadow-lg text-xs md:text-sm">
+              <div className="text-[8px] md:text-[10px] opacity-60 leading-tight">SCORE</div>
+              <div className="text-sm md:text-base font-bold leading-tight">{score.toString().padStart(8, "0")}</div>
             </div>
 
             {/* Level & Lives */}
-            <div className="bg-black/90 border-2 border-cyan-400/60 px-2.5 py-1 rounded font-mono text-cyan-400 backdrop-blur-sm shadow-lg">
-              <div className="text-[10px] opacity-60 leading-tight">LV {level}</div>
+            <div className="bg-black/90 border-2 border-cyan-400/60 px-2.5 py-1 rounded font-mono text-cyan-400 backdrop-blur-sm shadow-lg text-xs md:text-sm">
+              <div className="text-[8px] md:text-[10px] opacity-60 leading-tight">LV {level}</div>
               <div className="flex gap-0.5 mt-0.5">
                 {Array.from({ length: lives }).map((_, i) => (
                   <div
                     key={i}
-                    className="w-3 h-3 bg-cyan-400 shadow-[0_0_4px_rgba(6,182,212,0.8)]"
+                    className="w-2 md:w-3 h-2 md:h-3 bg-cyan-400 shadow-[0_0_4px_rgba(6,182,212,0.8)]"
                     style={{ clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }}
                   />
                 ))}
@@ -132,13 +132,13 @@ export function GameCanvas() {
 
           <div className="flex gap-2">
             {/* Weapon */}
-            <div className="bg-black/90 border-2 border-red-400/60 px-2.5 py-1 rounded font-mono text-red-400 backdrop-blur-sm shadow-lg">
-              <div className="text-[10px] opacity-60 leading-tight">WPN</div>
+            <div className="bg-black/90 border-2 border-red-400/60 px-2.5 py-1 rounded font-mono text-red-400 backdrop-blur-sm shadow-lg text-xs md:text-sm">
+              <div className="text-[8px] md:text-[10px] opacity-60 leading-tight">WPN</div>
               <div className="flex gap-0.5 mt-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div
                     key={i}
-                    className={`w-1.5 h-3.5 border border-red-400/50 ${
+                    className={`w-1 md:w-1.5 h-2.5 md:h-3.5 border border-red-400/50 ${
                       i < weaponLevel ? "bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.8)]" : "bg-black/50"
                     }`}
                   />
@@ -147,13 +147,13 @@ export function GameCanvas() {
             </div>
 
             {/* Shield */}
-            <div className="bg-black/90 border-2 border-cyan-400/60 px-2.5 py-1 rounded font-mono text-cyan-400 backdrop-blur-sm shadow-lg">
-              <div className="text-[10px] opacity-60 leading-tight">SHD</div>
+            <div className="bg-black/90 border-2 border-cyan-400/60 px-2.5 py-1 rounded font-mono text-cyan-400 backdrop-blur-sm shadow-lg text-xs md:text-sm">
+              <div className="text-[8px] md:text-[10px] opacity-60 leading-tight">SHD</div>
               <div className="flex gap-0.5 mt-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div
                     key={i}
-                    className={`w-1.5 h-3.5 border border-cyan-400/50 ${
+                    className={`w-1 md:w-1.5 h-2.5 md:h-3.5 border border-cyan-400/50 ${
                       i < shield ? "bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]" : "bg-black/50"
                     }`}
                   />
