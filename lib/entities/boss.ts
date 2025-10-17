@@ -20,6 +20,9 @@ export class Boss {
   private targetY = 0
   private velocityX = 0
   private velocityY = 0
+  private patternIndex = 0
+  private patternChangeTimer = 0
+  private patternChangeCooldown = 3000
 
   constructor(x: number, y: number, type: number, level: number) {
     this.x = x
@@ -45,6 +48,7 @@ export class Boss {
     this.angle += deltaTime * 0.002
     this.attackTimer += deltaTime
     this.moveTimer += deltaTime
+    this.patternChangeTimer += deltaTime
 
     switch (this.movePattern) {
       case 0: // Side to side
@@ -81,7 +85,7 @@ export class Boss {
     const healthPercent = this.health / this.maxHealth
     if (healthPercent < 0.25 && !this.dropped25) {
       this.phase = 3
-      this.attackCooldown = 1000
+      this.attackCooldown = 1200
       this.dropped25 = true
     } else if (healthPercent < 0.5 && !this.dropped50) {
       this.phase = 2
@@ -91,6 +95,11 @@ export class Boss {
       this.phase = 1
       this.attackCooldown = 1800
       this.dropped75 = true
+    }
+
+    if (this.patternChangeTimer > this.patternChangeCooldown) {
+      this.patternChangeTimer = 0
+      this.patternIndex = (this.patternIndex + 1) % 12
     }
   }
 
@@ -106,7 +115,7 @@ export class Boss {
     this.attackTimer = 0
     const bullets: Bullet[] = []
 
-    const basePattern = [
+    const allPatterns = [
       this.spiralPattern.bind(this),
       this.shotgunPattern.bind(this),
       this.circlePattern.bind(this),
@@ -119,22 +128,27 @@ export class Boss {
       this.spreadShot.bind(this, playerX, playerY),
       this.chainShot.bind(this),
       this.spiralAimed.bind(this, playerX, playerY),
-    ][this.type % 12]
+    ]
 
+    // Base pattern (always fires)
+    const basePattern = allPatterns[this.type % 12]
     bullets.push(...basePattern())
 
-    // Add extra patterns based on phase
+    // Add secondary patterns based on phase (max 2-3 patterns total)
     if (this.phase >= 1) {
-      bullets.push(...this.spiralPattern())
+      // Phase 1: Add 1 extra pattern
+      const secondaryPattern = allPatterns[(this.patternIndex + 1) % 12]
+      bullets.push(...secondaryPattern())
     }
     if (this.phase >= 2) {
-      bullets.push(...this.aimedPattern(playerX, playerY))
-      bullets.push(...this.helix())
+      // Phase 2: Add 2 extra patterns
+      const tertiaryPattern = allPatterns[(this.patternIndex + 2) % 12]
+      bullets.push(...tertiaryPattern())
     }
     if (this.phase >= 3) {
-      bullets.push(...this.circlePattern())
-      bullets.push(...this.crossPattern())
-      bullets.push(...this.spreadShot(playerX, playerY))
+      // Phase 3: Add up to 2 extra patterns (max 3 total with base)
+      const quaternaryPattern = allPatterns[(this.patternIndex + 3) % 12]
+      bullets.push(...quaternaryPattern())
     }
 
     return bullets

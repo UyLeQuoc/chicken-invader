@@ -261,7 +261,7 @@ export class Game {
         moved = true
       }
     }
-    // Keyboard controls
+    // Keyboard controls (always available)
     else if (
       this.keys.has("a") ||
       this.keys.has("arrowleft") ||
@@ -285,21 +285,6 @@ export class Game {
         this.player.y = Math.min(this.canvas.height - 20, this.player.y + speed)
       }
       moved = true
-    }
-    // Mouse movement (if no keyboard input)
-    else if (!this.isTouchDevice && this.mouseX > 0 && this.mouseY > 0) {
-      const dx = this.mouseX - this.player.x
-      const dy = this.mouseY - this.player.y
-      const distance = Math.sqrt(dx * dx + dy * dy)
-
-      if (distance > 5) {
-        const moveSpeed = Math.min(speed, distance)
-        this.player.x += (dx / distance) * moveSpeed
-        this.player.y += (dy / distance) * moveSpeed
-
-        this.player.x = Math.max(20, Math.min(this.canvas.width - 20, this.player.x))
-        this.player.y = Math.max(20, Math.min(this.canvas.height - 20, this.player.y))
-      }
     }
 
     this.shootCooldown -= deltaTime
