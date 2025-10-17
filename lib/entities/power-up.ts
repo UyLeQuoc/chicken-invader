@@ -9,6 +9,7 @@ export type PowerUpType =
   | "multiplier"
   | "slowmo"
   | "laser"
+  | "laser_weapon" // Added laser weapon power-up type
 
 export class PowerUp {
   x: number
@@ -52,6 +53,9 @@ export class PowerUp {
         this.color = "#8800ff"
         break
       case "laser":
+        this.color = "#00ff88"
+        break
+      case "laser_weapon": // Added laser weapon color
         this.color = "#00ff88"
         break
     }
@@ -113,6 +117,9 @@ export class PowerUp {
         icon = "⏱"
         break
       case "laser":
+        icon = "🔫"
+        break
+      case "laser_weapon": // Added laser weapon icon
         icon = "🔫"
         break
     }

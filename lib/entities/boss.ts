@@ -23,6 +23,8 @@ export class Boss {
   private patternIndex = 0
   private patternChangeTimer = 0
   private patternChangeCooldown = 3000
+  private activePatternCount = 1
+  private patternCooldownMultiplier = 1
 
   constructor(x: number, y: number, type: number, level: number) {
     this.x = x
@@ -97,7 +99,7 @@ export class Boss {
       this.dropped75 = true
     }
 
-    if (this.patternChangeTimer > this.patternChangeCooldown) {
+    if (this.patternChangeTimer > this.patternChangeCooldown * this.patternCooldownMultiplier) {
       this.patternChangeTimer = 0
       this.patternIndex = (this.patternIndex + 1) % 12
     }
@@ -134,21 +136,23 @@ export class Boss {
     const basePattern = allPatterns[this.type % 12]
     bullets.push(...basePattern())
 
-    // Add secondary patterns based on phase (max 2-3 patterns total)
+    this.activePatternCount = 1
+    this.patternCooldownMultiplier = 1
+
     if (this.phase >= 1) {
-      // Phase 1: Add 1 extra pattern
+      // Phase 1: Add 1 extra pattern (max 2 total)
       const secondaryPattern = allPatterns[(this.patternIndex + 1) % 12]
       bullets.push(...secondaryPattern())
+      this.activePatternCount = 2
+      this.patternCooldownMultiplier = 0.7 // Faster pattern rotation
     }
     if (this.phase >= 2) {
-      // Phase 2: Add 2 extra patterns
-      const tertiaryPattern = allPatterns[(this.patternIndex + 2) % 12]
-      bullets.push(...tertiaryPattern())
+      // Phase 2: Still max 2, but rotate faster
+      this.patternCooldownMultiplier = 0.5
     }
     if (this.phase >= 3) {
-      // Phase 3: Add up to 2 extra patterns (max 3 total with base)
-      const quaternaryPattern = allPatterns[(this.patternIndex + 3) % 12]
-      bullets.push(...quaternaryPattern())
+      // Phase 3: Max 2 patterns, fastest rotation
+      this.patternCooldownMultiplier = 0.3
     }
 
     return bullets

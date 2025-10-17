@@ -14,6 +14,7 @@ interface GameCallbacks {
   onWeaponLevelUpdate: (weaponLevel: number) => void
   onShieldUpdate: (shield: number) => void
   onGameOver: () => void
+  onBossDefeated: () => void
 }
 
 export class Game {
@@ -29,6 +30,7 @@ export class Game {
   private level = 1
   private lives = 3
   private weaponLevel = 1
+  private weaponType: "bullet" | "explosive" | "laser" = "bullet"
   private shield = 0
   private isBossLevel = false
   private waveComplete = false
@@ -143,12 +145,13 @@ export class Game {
     })
   }
 
-  start() {
+  start(shipType: "bullet" | "explosive" | "laser" = "bullet") {
     this.running = true
     this.score = 0
     this.level = 1
     this.lives = 3
     this.weaponLevel = 1
+    this.weaponType = shipType
     this.shield = 0
     this.isBossLevel = false
     this.waveComplete = false
@@ -300,8 +303,7 @@ export class Game {
   }
 
   private shoot() {
-    if (this.laserTimer > 0) {
-      // Laser beam - continuous damage to all enemies in path
+    if (this.weaponType === "laser" && this.laserTimer > 0) {
       this.shootLaser()
       return
     }
@@ -309,95 +311,13 @@ export class Game {
     const bulletSpeed = -8
     const spreadAngle = Math.PI / 12
 
-    switch (this.weaponLevel) {
-      case 1:
-        this.bullets.push(
-          new Bullet(this.player.x, this.player.y - 20, 0, bulletSpeed, "#00ffff", 5, this.explosiveBullets),
-        )
-        break
-      case 2:
-        this.bullets.push(
-          new Bullet(this.player.x - 10, this.player.y - 20, 0, bulletSpeed, "#00ffff", 5, this.explosiveBullets),
-        )
-        this.bullets.push(
-          new Bullet(this.player.x + 10, this.player.y - 20, 0, bulletSpeed, "#00ffff", 5, this.explosiveBullets),
-        )
-        break
-      case 3:
-        this.bullets.push(
-          new Bullet(this.player.x, this.player.y - 20, 0, bulletSpeed, "#ffff00", 6, this.explosiveBullets),
-        )
-        this.bullets.push(
-          new Bullet(
-            this.player.x - 15,
-            this.player.y - 15,
-            -Math.sin(spreadAngle) * 8,
-            bulletSpeed,
-            "#ffff00",
-            6,
-            this.explosiveBullets,
-          ),
-        )
-        this.bullets.push(
-          new Bullet(
-            this.player.x + 15,
-            this.player.y - 15,
-            Math.sin(spreadAngle) * 8,
-            bulletSpeed,
-            "#ffff00",
-            6,
-            this.explosiveBullets,
-          ),
-        )
-        break
-      case 4:
-        for (let i = -1; i <= 1; i++) {
-          this.bullets.push(
-            new Bullet(
-              this.player.x + i * 15,
-              this.player.y - 20,
-              i * 0.5,
-              bulletSpeed,
-              "#ff8800",
-              7,
-              this.explosiveBullets,
-            ),
-          )
-        }
-        this.bullets.push(
-          new Bullet(this.player.x - 20, this.player.y - 10, -2, bulletSpeed, "#ff8800", 7, this.explosiveBullets),
-        )
-        this.bullets.push(
-          new Bullet(this.player.x + 20, this.player.y - 10, 2, bulletSpeed, "#ff8800", 7, this.explosiveBullets),
-        )
-        break
-      case 5:
-        for (let i = -2; i <= 2; i++) {
-          this.bullets.push(
-            new Bullet(
-              this.player.x + i * 12,
-              this.player.y - 20,
-              i * 0.6,
-              bulletSpeed,
-              "#ff0000",
-              8,
-              this.explosiveBullets,
-            ),
-          )
-        }
-        this.bullets.push(
-          new Bullet(this.player.x - 25, this.player.y - 10, -3, bulletSpeed, "#ff0000", 8, this.explosiveBullets),
-        )
-        this.bullets.push(
-          new Bullet(this.player.x + 25, this.player.y - 10, 3, bulletSpeed, "#ff0000", 8, this.explosiveBullets),
-        )
-        break
-      default:
-        this.bullets.push(
-          new Bullet(this.player.x, this.player.y - 20, 0, bulletSpeed, "#ffffff", 8, this.explosiveBullets),
-        )
-        break
+    const weaponPatterns = {
+      bullet: this.shootBulletWeapon.bind(this),
+      explosive: this.shootExplosiveWeapon.bind(this),
+      laser: this.shootLaserWeapon.bind(this),
     }
+
+    weaponPatterns[this.weaponType](bulletSpeed, spreadAngle)
 
     // Muzzle flash particles
     for (let i = 0; i < 3; i++) {
@@ -414,45 +334,121 @@ export class Game {
     }
   }
 
-  private shootLaser() {
-    const laserWidth = 20
-    const laserX = this.player.x
-    const laserY = this.player.y - 20
-
-    for (let i = this.enemies.length - 1; i >= 0; i--) {
-      const enemy = this.enemies[i]
-      if (Math.abs(enemy.x - laserX) < laserWidth && enemy.y < laserY) {
-        enemy.health -= 0.5 // Increased damage per frame
-        if (enemy.health <= 0) {
-          this.enemies.splice(i, 1)
-          this.score += 100 * this.scoreMultiplier
-          this.callbacks.onScoreUpdate(this.score)
-          this.createExplosion(enemy.x, enemy.y)
-          if (Math.random() < 0.15) {
-            this.powerUps.push(new PowerUp(enemy.x, enemy.y, this.getRandomPowerUpType()))
-          }
+  private shootBulletWeapon(bulletSpeed: number, spreadAngle: number) {
+    switch (this.weaponLevel) {
+      case 1:
+        this.bullets.push(new Bullet(this.player.x, this.player.y - 20, 0, bulletSpeed, "#00ffff", 5, false))
+        break
+      case 2:
+        this.bullets.push(new Bullet(this.player.x - 10, this.player.y - 20, 0, bulletSpeed, "#00ffff", 5, false))
+        this.bullets.push(new Bullet(this.player.x + 10, this.player.y - 20, 0, bulletSpeed, "#00ffff", 5, false))
+        break
+      case 3:
+        this.bullets.push(new Bullet(this.player.x, this.player.y - 20, 0, bulletSpeed, "#00ffff", 6, false))
+        this.bullets.push(
+          new Bullet(
+            this.player.x - 15,
+            this.player.y - 15,
+            -Math.sin(spreadAngle) * 8,
+            bulletSpeed,
+            "#00ffff",
+            6,
+            false,
+          ),
+        )
+        this.bullets.push(
+          new Bullet(
+            this.player.x + 15,
+            this.player.y - 15,
+            Math.sin(spreadAngle) * 8,
+            bulletSpeed,
+            "#00ffff",
+            6,
+            false,
+          ),
+        )
+        break
+      case 4:
+        for (let i = -1; i <= 1; i++) {
+          this.bullets.push(
+            new Bullet(this.player.x + i * 15, this.player.y - 20, i * 0.5, bulletSpeed, "#00ffff", 7, false),
+          )
         }
-      }
+        this.bullets.push(new Bullet(this.player.x - 20, this.player.y - 10, -2, bulletSpeed, "#00ffff", 7, false))
+        this.bullets.push(new Bullet(this.player.x + 20, this.player.y - 10, 2, bulletSpeed, "#00ffff", 7, false))
+        break
+      case 5:
+        for (let i = -2; i <= 2; i++) {
+          this.bullets.push(
+            new Bullet(this.player.x + i * 12, this.player.y - 20, i * 0.6, bulletSpeed, "#00ffff", 8, false),
+          )
+        }
+        this.bullets.push(new Bullet(this.player.x - 25, this.player.y - 10, -3, bulletSpeed, "#00ffff", 8, false))
+        this.bullets.push(new Bullet(this.player.x + 25, this.player.y - 10, 3, bulletSpeed, "#00ffff", 8, false))
+        break
     }
+  }
 
-    // Damage boss if in path
-    if (this.boss && Math.abs(this.boss.x - laserX) < laserWidth + 40) {
-      this.boss.takeDamage(0.2)
-      this.shakeAmount = 1
-    }
+  private shootExplosiveWeapon(bulletSpeed: number, spreadAngle: number) {
+    const bulletSize = 6 + this.weaponLevel * 1.5
+    const bulletColor = ["#ff6600", "#ff5500", "#ff4400", "#ff2200", "#ff0000"][this.weaponLevel - 1]
 
-    // Laser particles
-    for (let i = 0; i < 2; i++) {
-      this.particles.push(
-        new Particle(
-          laserX + (Math.random() - 0.5) * laserWidth,
-          laserY - Math.random() * 100,
-          (Math.random() - 0.5) * 2,
-          -Math.random() * 5,
-          "#00ff88",
-          15,
-        ),
-      )
+    this.bullets.push(new Bullet(this.player.x, this.player.y - 20, 0, bulletSpeed, bulletColor, bulletSize, true))
+  }
+
+  private shootLaserWeapon(bulletSpeed: number, spreadAngle: number) {
+    // Laser weapon shoots a continuous beam, not bullets
+    // Activate laser timer for rendering
+    this.laserTimer = 100 // Duration of laser beam
+  }
+
+  private getRandomPowerUpType(): PowerUp["type"] {
+    const types: PowerUp["type"][] = [
+      "weapon",
+      "weapon",
+      "weapon", // Increased weapon drop rate (3x)
+      "shield",
+      "health",
+      "invincibility",
+      "speed",
+      "firerate",
+      "multiplier",
+      "slowmo",
+    ]
+    return types[Math.floor(Math.random() * types.length)]
+  }
+
+  private collectPowerUp(type: PowerUp["type"]) {
+    switch (type) {
+      case "weapon":
+        this.weaponLevel = Math.min(5, this.weaponLevel + 1)
+        this.callbacks.onWeaponLevelUpdate(this.weaponLevel)
+        break
+      case "shield":
+        this.shield = Math.min(5, this.shield + 1)
+        this.callbacks.onShieldUpdate(this.shield)
+        break
+      case "health":
+        this.lives = Math.min(5, this.lives + 1)
+        this.callbacks.onLivesUpdate(this.lives)
+        break
+      case "invincibility":
+        this.player.invulnerable = true
+        this.invincibilityTimer = 8000
+        break
+      case "speed":
+        this.speedBoostTimer = 10000
+        break
+      case "firerate":
+        this.fireRateBoostTimer = 10000
+        break
+      case "multiplier":
+        this.scoreMultiplier = 2
+        this.scoreMultiplierTimer = 15000
+        break
+      case "slowmo":
+        this.slowMoTimer = 8000
+        break
     }
   }
 
@@ -461,9 +457,6 @@ export class Game {
 
     const timeScale = this.slowMoTimer > 0 ? 0.5 : 1
     const scaledDelta = deltaTime * timeScale
-
-    if (this.explosiveTimer > 0) this.explosiveTimer -= deltaTime
-    if (this.explosiveTimer <= 0) this.explosiveBullets = false
 
     if (this.invincibilityTimer > 0) this.invincibilityTimer -= deltaTime
     if (this.invincibilityTimer <= 0) this.player.invulnerable = false
@@ -506,6 +499,10 @@ export class Game {
       this.boss.update(scaledDelta)
 
       const newBullets = this.boss.shoot(this.player.x, this.player.y)
+      newBullets.forEach((bullet) => {
+        bullet.vx *= 0.8
+        bullet.vy *= 0.8
+      })
       this.enemyBullets.push(...newBullets)
 
       const healthPercent = this.boss.health / this.boss.maxHealth
@@ -549,6 +546,7 @@ export class Game {
         }
 
         this.boss = null
+        this.callbacks.onBossDefeated()
       }
     }
 
@@ -583,23 +581,6 @@ export class Game {
     } else {
       this.shakeAmount = 0
     }
-  }
-
-  private getRandomPowerUpType(): PowerUp["type"] {
-    const types: PowerUp["type"][] = [
-      "weapon",
-      "weapon", // Increased weapon drop rate
-      "shield",
-      "health",
-      "explosive",
-      "invincibility",
-      "speed",
-      "firerate",
-      "multiplier",
-      "slowmo",
-      "laser",
-    ]
-    return types[Math.floor(Math.random() * types.length)]
   }
 
   private dropBossItem() {
@@ -763,44 +744,45 @@ export class Game {
     }, 2000)
   }
 
-  private collectPowerUp(type: PowerUp["type"]) {
-    switch (type) {
-      case "weapon":
-        this.weaponLevel = Math.min(5, this.weaponLevel + 1)
-        this.callbacks.onWeaponLevelUpdate(this.weaponLevel)
-        break
-      case "shield":
-        this.shield = Math.min(5, this.shield + 1)
-        this.callbacks.onShieldUpdate(this.shield)
-        break
-      case "health":
-        this.lives = Math.min(5, this.lives + 1)
-        this.callbacks.onLivesUpdate(this.lives)
-        break
-      case "explosive":
-        this.explosiveBullets = true
-        this.explosiveTimer = 10000
-        break
-      case "invincibility":
-        this.player.invulnerable = true
-        this.invincibilityTimer = 8000
-        break
-      case "speed":
-        this.speedBoostTimer = 10000
-        break
-      case "firerate":
-        this.fireRateBoostTimer = 10000
-        break
-      case "multiplier":
-        this.scoreMultiplier = 2
-        this.scoreMultiplierTimer = 15000
-        break
-      case "slowmo":
-        this.slowMoTimer = 8000
-        break
-      case "laser":
-        this.laserTimer = 12000
-        break
+  private shootLaser() {
+    const laserWidth = 20
+    const laserX = this.player.x
+    const laserY = this.player.y - 20
+
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const enemy = this.enemies[i]
+      if (Math.abs(enemy.x - laserX) < laserWidth && enemy.y < laserY) {
+        enemy.health -= 0.5 // Increased damage per frame
+        if (enemy.health <= 0) {
+          this.enemies.splice(i, 1)
+          this.score += 100 * this.scoreMultiplier
+          this.callbacks.onScoreUpdate(this.score)
+          this.createExplosion(enemy.x, enemy.y)
+          if (Math.random() < 0.15) {
+            this.powerUps.push(new PowerUp(enemy.x, enemy.y, this.getRandomPowerUpType()))
+          }
+        }
+      }
+    }
+
+    // Damage boss if in path
+    if (this.boss && Math.abs(this.boss.x - laserX) < laserWidth + 40) {
+      this.boss.takeDamage(0.2)
+      this.shakeAmount = 1
+    }
+
+    // Laser particles
+    for (let i = 0; i < 2; i++) {
+      this.particles.push(
+        new Particle(
+          laserX + (Math.random() - 0.5) * laserWidth,
+          laserY - Math.random() * 100,
+          (Math.random() - 0.5) * 2,
+          -Math.random() * 5,
+          "#00ff88",
+          15,
+        ),
+      )
     }
   }
 
@@ -886,10 +868,6 @@ export class Game {
     let timerY = this.canvas.height - 25
     const timerX = 10
 
-    if (this.explosiveBullets) {
-      this.renderBuffTimer(timerX, timerY, "💣 EXPLOSIVE", this.explosiveTimer, "#ff8800")
-      timerY -= 28
-    }
     if (this.invincibilityTimer > 0) {
       this.renderBuffTimer(timerX, timerY, "⭐ INVINCIBLE", this.invincibilityTimer, "#00ffff")
       timerY -= 28
