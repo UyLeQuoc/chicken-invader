@@ -4,7 +4,7 @@ import { Boss } from "./entities/boss"
 import { Bullet } from "./entities/bullet"
 import { PowerUp } from "./entities/power-up"
 import { Particle } from "./entities/particle"
-import { StarField } from "./entities/starfield"
+import { Background } from "./entities/background"
 import { EnemyFormation } from "./formations"
 
 interface GameCallbacks {
@@ -58,7 +58,7 @@ export class Game {
   private enemyBullets: Bullet[] = []
   private powerUps: PowerUp[] = []
   private particles: Particle[] = []
-  private starField: StarField
+  private background: Background
 
   // Input
   private keys: Set<string> = new Set()
@@ -82,7 +82,7 @@ export class Game {
     this.callbacks = callbacks
 
     this.player = new Player(canvas.width / 2, canvas.height - 80)
-    this.starField = new StarField(canvas.width, canvas.height)
+    this.background = new Background(canvas.width, canvas.height)
 
     this.isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0
 
@@ -471,7 +471,7 @@ export class Game {
       if (this.scoreMultiplierTimer <= 0) this.scoreMultiplier = 1
     }
 
-    this.starField.update(scaledDelta)
+    this.background.update(scaledDelta / 1000)
     this.handleInput(deltaTime)
     this.player.update(scaledDelta, this.shield)
 
@@ -794,10 +794,7 @@ export class Game {
       this.ctx.translate(shakeX, shakeY)
     }
 
-    this.ctx.fillStyle = "#000814"
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
-
-    this.starField.draw(this.ctx)
+    this.background.draw(this.ctx)
     this.particles.forEach((particle) => particle.draw(this.ctx))
 
     if (this.laserTimer > 0) {
