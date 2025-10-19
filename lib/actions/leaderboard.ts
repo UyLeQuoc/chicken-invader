@@ -8,6 +8,7 @@ export interface LeaderboardEntry {
   ship_type: string
   score: number
   level: number
+  wave: number
   created_at: string
 }
 
@@ -23,12 +24,12 @@ function getSql() {
   return neon(databaseUrl)
 }
 
-export async function submitScore(name: string, score: number, level: number): Promise<LeaderboardEntry> {
+export async function submitScore(name: string, score: number, level: number, wave = 1): Promise<LeaderboardEntry> {
   try {
     const sql = getSql()
     const result = await sql`
-      INSERT INTO leaderboard (name, ship_type, score, level) 
-      VALUES (${name}, ${"bullet"}, ${score}, ${level}) 
+      INSERT INTO leaderboard (name, ship_type, score, level, wave) 
+      VALUES (${name}, ${"bullet"}, ${score}, ${level}, ${wave}) 
       RETURNING *
     `
     return (result as LeaderboardEntry[])[0]
@@ -52,4 +53,3 @@ export async function getTopScores(limit = 10): Promise<LeaderboardEntry[]> {
     throw new Error("Failed to fetch leaderboard")
   }
 }
-

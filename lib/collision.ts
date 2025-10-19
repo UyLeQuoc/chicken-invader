@@ -27,4 +27,3 @@ export function checkRectCollision(
     obj1.y + height1 > obj2.y
   )
 }
-

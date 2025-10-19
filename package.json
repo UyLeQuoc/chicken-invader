@@ -5,9 +5,9 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
+    "knip": "knip",
     "lint": "eslint .",
-    "start": "next start",
-    "knip": "knip"
+    "start": "next start"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

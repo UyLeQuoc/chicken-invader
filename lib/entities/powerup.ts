@@ -47,6 +47,26 @@ export class Powerup {
         this.color = "#f0f"
         this.label = "B"
         break
+      case "health":
+        this.color = "#f00"
+        this.label = "HP"
+        break
+      case "invincible":
+        this.color = "#ffff00"
+        this.label = "INV"
+        break
+      case "speed":
+        this.color = "#00ffff"
+        this.label = "SPD"
+        break
+      case "multiplier":
+        this.color = "#ff00ff"
+        this.label = "MUL"
+        break
+      case "slowmo":
+        this.color = "#00ff00"
+        this.label = "SLO"
+        break
     }
   }
 
@@ -200,6 +220,76 @@ export class Powerup {
         ctx.arc(-3, -8, 2, 0, Math.PI * 2)
         ctx.fill()
         break
+
+      case "health":
+        // Heart ❤
+        ctx.beginPath()
+        ctx.moveTo(0, -2)
+        ctx.bezierCurveTo(-4, -6, -6, -4, -6, -1)
+        ctx.bezierCurveTo(-6, 2, 0, 6, 0, 6)
+        ctx.bezierCurveTo(0, 6, 6, 2, 6, -1)
+        ctx.bezierCurveTo(6, -4, 4, -6, 0, -2)
+        ctx.fill()
+        break
+
+      case "invincible":
+        // Star ⭐
+        const invincibleSpikes = 5
+        const invincibleOuterRadius = 8
+        const invincibleInnerRadius = 3
+        ctx.beginPath()
+        for (let i = 0; i < invincibleSpikes * 2; i++) {
+          const radius = i % 2 === 0 ? invincibleOuterRadius : invincibleInnerRadius
+          const angle = (i * Math.PI) / invincibleSpikes - Math.PI / 2
+          const x = Math.cos(angle) * radius
+          const y = Math.sin(angle) * radius
+          if (i === 0) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        }
+        ctx.closePath()
+        ctx.fill()
+        break
+
+      case "speed":
+        // Lightning bolt ⚡
+        ctx.beginPath()
+        ctx.moveTo(-2, -8)
+        ctx.lineTo(3, -1)
+        ctx.lineTo(0, -1)
+        ctx.lineTo(2, 8)
+        ctx.lineTo(-3, 1)
+        ctx.lineTo(0, 1)
+        ctx.closePath()
+        ctx.fill()
+        break
+
+      case "multiplier":
+        // Multiply symbol ✨
+        ctx.beginPath()
+        ctx.moveTo(-6, -6)
+        ctx.lineTo(6, 6)
+        ctx.moveTo(6, -6)
+        ctx.lineTo(-6, 6)
+        ctx.stroke()
+        ctx.beginPath()
+        ctx.arc(0, 0, 8, 0, Math.PI * 2)
+        ctx.stroke()
+        break
+
+      case "slowmo":
+        // Hourglass ⏱
+        ctx.beginPath()
+        ctx.moveTo(-6, -8)
+        ctx.lineTo(6, -8)
+        ctx.lineTo(0, -2)
+        ctx.lineTo(6, 4)
+        ctx.lineTo(6, 8)
+        ctx.lineTo(-6, 8)
+        ctx.lineTo(-6, 4)
+        ctx.lineTo(0, -2)
+        ctx.lineTo(-6, -8)
+        ctx.stroke()
+        break
     }
   }
 
@@ -222,4 +312,3 @@ export class Powerup {
     )
   }
 }
-

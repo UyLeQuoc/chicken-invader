@@ -5,7 +5,7 @@ import { Powerup } from "./entities/powerup"
 import { Particle } from "./entities/particle"
 import { Background } from "./entities/background"
 import { UI } from "./entities/ui"
-import { Projectile } from "./entities/projectile"
+import type { Projectile } from "./entities/projectile"
 import { checkCircleCollision } from "./collision"
 
 export class Game {
@@ -46,23 +46,27 @@ export class Game {
 
   mouseX: number
   mouseY: number
-  
+
+  activeEffects: Map<string, number>
+  scoreMultiplier: number
+  timeSlowFactor: number
+
   private animationId: number | null = null
   private lastTime = 0
   private keys: Record<string, boolean> = {}
 
   // Callbacks for React integration
   private callbacks: {
-  onScoreUpdate: (score: number) => void
-  onLevelUpdate: (level: number) => void
-  onLivesUpdate: (lives: number) => void
-  onWeaponLevelUpdate: (weaponLevel: number) => void
-  onShieldUpdate: (shield: number) => void
-  onGameOver: () => void
-}
+    onScoreUpdate: (score: number) => void
+    onLevelUpdate: (level: number) => void
+    onLivesUpdate: (lives: number) => void
+    onWeaponLevelUpdate: (weaponLevel: number) => void
+    onShieldUpdate: (shield: number) => void
+    onGameOver: () => void
+  }
 
   constructor(
-    canvas: HTMLCanvasElement, 
+    canvas: HTMLCanvasElement,
     ctx: CanvasRenderingContext2D,
     callbacks: {
       onScoreUpdate: (score: number) => void
@@ -71,7 +75,7 @@ export class Game {
       onWeaponLevelUpdate: (weaponLevel: number) => void
       onShieldUpdate: (shield: number) => void
       onGameOver: () => void
-    }
+    },
   ) {
     this.canvas = canvas
     this.ctx = ctx
@@ -111,6 +115,10 @@ export class Game {
 
     this.mouseX = 0
     this.mouseY = 0
+
+    this.activeEffects = new Map()
+    this.scoreMultiplier = 1
+    this.timeSlowFactor = 1
 
     this.setupInput()
   }
@@ -250,7 +258,7 @@ export class Game {
     if (isBossLevel) {
       this.ui.showBossWarning()
       setTimeout(() => {
-      this.spawnBoss()
+        this.spawnBoss()
       }, 3000)
     } else {
       this.ui.showLevelTransition(`LEVEL ${this.level} - WAVE`)
@@ -396,6 +404,25 @@ export class Game {
       this.flashAlpha -= deltaTime * 3
       if (this.flashAlpha < 0) this.flashAlpha = 0
     }
+
+    for (const [effect, duration] of this.activeEffects.entries()) {
+      const newDuration = duration - deltaTime
+      if (newDuration <= 0) {
+        this.activeEffects.delete(effect)
+        // Reset effects when they expire
+        if (effect === "speed") {
+          this.player.speed = 300
+        }
+        if (effect === "multiplier") {
+          this.scoreMultiplier = 1
+        }
+        if (effect === "slowmo") {
+          this.timeSlowFactor = 1
+        }
+      } else {
+        this.activeEffects.set(effect, newDuration)
+      }
+    }
   }
 
   private checkCollisions(): void {
@@ -468,9 +495,9 @@ export class Game {
   }
 
   private destroyEnemy(enemy: Enemy): void {
-    this.score += enemy.points * (this.combo + 1)
+    this.score += enemy.points * (this.combo + 1) * this.scoreMultiplier
     this.ui.updateScore(this.score)
-            this.callbacks.onScoreUpdate(this.score)
+    this.callbacks.onScoreUpdate(this.score)
 
     this.combo++
     this.comboTimer = 2
@@ -481,14 +508,19 @@ export class Game {
 
     this.createExplosion(enemy.x, enemy.y, enemy.type)
 
-            if (Math.random() < 0.15) {
-      const types: Array<"weapon" | "firerate" | "spread" | "shield" | "bomb"> = [
-        "weapon",
-        "firerate",
-        "spread",
-        "shield",
-        "bomb",
-      ]
+    if (Math.random() < 0.15) {
+      const types: Array<
+        | "weapon"
+        | "firerate"
+        | "spread"
+        | "shield"
+        | "bomb"
+        | "health"
+        | "invincible"
+        | "speed"
+        | "multiplier"
+        | "slowmo"
+      > = ["weapon", "firerate", "spread", "shield", "bomb", "health", "invincible", "speed", "multiplier", "slowmo"]
       const type = types[Math.floor(Math.random() * types.length)]
       this.powerups.push(new Powerup(enemy.x, enemy.y, type))
     }
@@ -505,13 +537,18 @@ export class Game {
     this.createBossExplosion(boss)
 
     for (let i = 0; i < 3; i++) {
-      const types: Array<"weapon" | "firerate" | "spread" | "shield" | "bomb"> = [
-        "weapon",
-        "firerate",
-        "spread",
-        "shield",
-        "bomb",
-      ]
+      const types: Array<
+        | "weapon"
+        | "firerate"
+        | "spread"
+        | "shield"
+        | "bomb"
+        | "health"
+        | "invincible"
+        | "speed"
+        | "multiplier"
+        | "slowmo"
+      > = ["weapon", "firerate", "spread", "shield", "bomb", "health", "invincible", "speed", "multiplier", "slowmo"]
       const type = types[Math.floor(Math.random() * types.length)]
       const offsetX = (Math.random() - 0.5) * 60
       const offsetY = (Math.random() - 0.5) * 60
@@ -574,16 +611,35 @@ export class Game {
         this.bombs++
         this.ui.updateBombs(this.bombs)
         break
+      case "health":
+        this.lives++
+        this.callbacks.onLivesUpdate(this.lives)
+        this.ui.updateLives(this.lives)
+        this.activeEffects.set("health", 0.5)
+        break
+      case "invincible":
+        this.player.invincible = true
+        this.player.invincibleTime = 8
+        this.activeEffects.set("invincible", 8)
+        break
+      case "speed":
+        this.player.speed = 450
+        this.activeEffects.set("speed", 10)
+        break
+      case "multiplier":
+        this.scoreMultiplier = 2
+        this.activeEffects.set("multiplier", 15)
+        break
+      case "slowmo":
+        this.timeSlowFactor = 0.5
+        this.activeEffects.set("slowmo", 8)
+        break
     }
 
     this.callbacks.onWeaponLevelUpdate(this.player.weaponLevel)
-    if (this.player.shield) {
-      // Update shield status via a callback if needed
-      // For now we don't have a direct way to read shield count from player
-    }
 
     this.createPowerupEffect(powerup.x, powerup.y, powerup.color)
-    this.score += 100
+    this.score += 100 * this.scoreMultiplier
     this.ui.updateScore(this.score)
     this.callbacks.onScoreUpdate(this.score)
   }

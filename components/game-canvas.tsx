@@ -23,6 +23,9 @@ export function GameCanvas() {
   const [playerName, setPlayerName] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [leaderboardAvailable, setLeaderboardAvailable] = useState(true)
+  const [bossHealth, setBossHealth] = useState(0)
+  const [bossMaxHealth, setBossMaxHealth] = useState(100)
+  const [activeEffects, setActiveEffects] = useState<string[]>([])
 
   useEffect(() => {
     const loadLeaderboard = async () => {
@@ -252,6 +255,39 @@ export function GameCanvas() {
           </div>
         </div>
 
+        {bossMaxHealth > 0 && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 pointer-events-none">
+            <div className="bg-black/80 border-2 border-red-500 px-4 py-2 rounded">
+              <div className="text-red-500 font-mono text-sm mb-2 text-center">BOSS HEALTH</div>
+              <div className="w-full h-6 bg-black/50 border border-red-500 rounded overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all"
+                  style={{ width: `${(bossHealth / bossMaxHealth) * 100}%` }}
+                />
+              </div>
+              <div className="text-red-400 font-mono text-xs mt-1 text-center">
+                {Math.ceil(bossHealth)} / {bossMaxHealth}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeEffects.length > 0 && (
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-2 pointer-events-none">
+            {activeEffects.map((effect) => (
+              <div
+                key={effect}
+                className="bg-black/80 border-2 border-yellow-400 px-3 py-1 rounded font-mono text-xs text-yellow-400"
+              >
+                {effect === "invincible" && "⭐ INVINCIBLE"}
+                {effect === "speed" && "⚡ SPEED"}
+                {effect === "multiplier" && "✨ 2x SCORE"}
+                {effect === "slowmo" && "⏱ SLOW-MO"}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Menu Screen with Leaderboard */}
         {gameState === "menu" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 overflow-y-auto p-4">
@@ -292,7 +328,7 @@ export function GameCanvas() {
               START GAME
             </button>
           </div>
-          )}
+        )}
 
         {/* Instructions Screen */}
         {gameState === "instructions" && (
