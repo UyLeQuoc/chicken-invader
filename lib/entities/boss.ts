@@ -1,428 +1,592 @@
-import { Bullet } from "./bullet"
+import type { Game } from "../game"
+import { Projectile } from "./projectile"
+import { Particle } from "./particle"
 
 export class Boss {
+  game: Game
   x: number
   y: number
-  health: number
-  maxHealth: number
-  name: string
   type: number
-  dropped75 = false
-  dropped50 = false
-  dropped25 = false
-  private angle = 0
-  private phase = 0
-  private attackTimer = 0
-  private attackCooldown = 1500
-  private movePattern = 0
-  private moveTimer = 0
-  private targetX = 0
-  private targetY = 0
-  private velocityX = 0
-  private velocityY = 0
-  private patternIndex = 0
-  private patternChangeTimer = 0
-  private patternChangeCooldown = 3000
-  private activePatternCount = 1
-  private patternCooldownMultiplier = 1
+  width: number
+  height: number
+  radius: number
+  maxHealth: number
+  health: number
+  speed: number
+  vx: number
+  vy: number
+  phase: number
+  maxPhases: number
+  phaseChangeTimer: number
+  movementTimer: number
+  movementPattern: number
+  targetX: number
+  targetY: number
+  attackTimer: number
+  attackInterval: number
+  attackPattern: number
+  animationFrame: number
+  animationTimer: number
+  wingAngle: number
+  rotationAngle: number
+  flashTimer: number
+  glowIntensity: number
+  charging: boolean
+  chargingTimer: number
+  weakPointActive: boolean
+  weakPointTimer: number
+  weakPointX: number
+  weakPointY: number
+  names: string[]
+  name: string
+  entering: boolean
+  entryTimer: number
 
-  constructor(x: number, y: number, type: number, level: number) {
+  constructor(x: number, y: number, type: number, game: Game) {
+    this.game = game
     this.x = x
     this.y = y
     this.targetX = x
-    this.targetY = y
+    this.targetY = 150
     this.type = type
-    this.maxHealth = 30 + level * 12
+
+    this.width = 120
+    this.height = 120
+    this.radius = 60
+
+    this.maxHealth = 500 + type * 200
     this.health = this.maxHealth
-    this.name = [
-      "COLONEL CLUCKSWORTH",
-      "GENERAL PECKINGTON",
-      "ADMIRAL FEATHERBEARD",
-      "CAPTAIN WINGNUT",
-      "MAJOR DRUMSTICK",
-      "SERGEANT SCRAMBLES",
-      "COMMANDER COOP",
-      "LORD EGGBERT",
-    ][type % 8]
-  }
 
-  update(deltaTime: number) {
-    this.angle += deltaTime * 0.002
-    this.attackTimer += deltaTime
-    this.moveTimer += deltaTime
-    this.patternChangeTimer += deltaTime
+    this.speed = 100
+    this.vx = 0
+    this.vy = 100
 
-    switch (this.movePattern) {
-      case 0: // Side to side
-        this.targetX = 400 + Math.sin(this.moveTimer * 0.001) * 300
-        this.targetY = 150
-        break
-      case 1: // Figure 8
-        this.targetX = 400 + Math.sin(this.moveTimer * 0.001) * 250
-        this.targetY = 150 + Math.sin(this.moveTimer * 0.002) * 50
-        break
-      case 2: // Circular
-        this.targetX = 400 + Math.cos(this.moveTimer * 0.001) * 200
-        this.targetY = 150 + Math.sin(this.moveTimer * 0.001) * 100
-        break
-      case 3: // Vertical wave
-        this.targetX = 400 + Math.sin(this.moveTimer * 0.002) * 150
-        this.targetY = 120 + Math.sin(this.moveTimer * 0.001) * 80
-        break
-    }
+    this.phase = 0
+    this.maxPhases = 4
+    this.phaseChangeTimer = 0
 
-    const smoothing = 0.05
-    this.velocityX = (this.targetX - this.x) * smoothing
-    this.velocityY = (this.targetY - this.y) * smoothing
-    this.x += this.velocityX
-    this.y += this.velocityY
-
-    // Change movement pattern periodically
-    if (this.moveTimer > 5000) {
-      this.moveTimer = 0
-      this.movePattern = (this.movePattern + 1) % 4
-    }
-
-    // Update phase based on health
-    const healthPercent = this.health / this.maxHealth
-    if (healthPercent < 0.25 && !this.dropped25) {
-      this.phase = 3
-      this.attackCooldown = 1200
-      this.dropped25 = true
-    } else if (healthPercent < 0.5 && !this.dropped50) {
-      this.phase = 2
-      this.attackCooldown = 1500
-      this.dropped50 = true
-    } else if (healthPercent < 0.75 && !this.dropped75) {
-      this.phase = 1
-      this.attackCooldown = 1800
-      this.dropped75 = true
-    }
-
-    if (this.patternChangeTimer > this.patternChangeCooldown * this.patternCooldownMultiplier) {
-      this.patternChangeTimer = 0
-      this.patternIndex = (this.patternIndex + 1) % 12
-    }
-  }
-
-  takeDamage(amount: number) {
-    this.health -= amount
-  }
-
-  shoot(playerX: number, playerY: number): Bullet[] {
-    if (this.attackTimer < this.attackCooldown) {
-      return []
-    }
+    this.movementTimer = 0
+    this.movementPattern = 0
 
     this.attackTimer = 0
-    const bullets: Bullet[] = []
+    this.attackInterval = 2
+    this.attackPattern = 0
 
-    const allPatterns = [
-      this.spiralPattern.bind(this),
-      this.shotgunPattern.bind(this),
-      this.circlePattern.bind(this),
-      this.aimedPattern.bind(this, playerX, playerY),
-      this.wavePattern.bind(this),
+    this.animationFrame = 0
+    this.animationTimer = 0
+    this.wingAngle = 0
+    this.rotationAngle = 0
+
+    this.flashTimer = 0
+    this.glowIntensity = 0
+    this.charging = false
+    this.chargingTimer = 0
+
+    this.weakPointActive = false
+    this.weakPointTimer = 0
+    this.weakPointX = 0
+    this.weakPointY = -20
+
+    this.names = ["COLONEL CLUCKSWORTH", "GENERAL PECKERSON", "ADMIRAL FEATHERBEAK", "SUPREME ROOSTER"]
+    this.name = this.names[type % this.names.length]
+
+    this.entering = true
+    this.entryTimer = 0
+  }
+
+  update(deltaTime: number): void {
+    if (this.entering) {
+      this.entryTimer += deltaTime
+      this.y += 150 * deltaTime
+
+      if (this.y >= this.targetY) {
+        this.y = this.targetY
+        this.entering = false
+        this.game.addScreenShake(0.5)
+      }
+      return
+    }
+
+    const healthPercent = this.health / this.maxHealth
+    const newPhase = Math.floor((1 - healthPercent) * this.maxPhases)
+
+    if (newPhase > this.phase) {
+      this.phase = newPhase
+      this.onPhaseChange()
+    }
+
+    this.movementTimer += deltaTime
+
+    switch (this.movementPattern) {
+      case 0:
+        this.targetX = this.game.width / 2 + Math.sin(this.movementTimer * 1.5) * 200
+        this.targetY = 150
+        break
+      case 1:
+        this.targetX = this.game.width / 2 + Math.sin(this.movementTimer) * 250
+        this.targetY = 150 + Math.sin(this.movementTimer * 2) * 80
+        break
+      case 2:
+        const angle = this.movementTimer
+        this.targetX = this.game.width / 2 + Math.cos(angle) * 200
+        this.targetY = 200 + Math.sin(angle) * 100
+        break
+      case 3:
+        if (Math.floor(this.movementTimer) % 5 < 2) {
+          this.targetY = 300
+          this.targetX = this.game.player.x
+        } else {
+          this.targetY = 150
+        }
+        break
+    }
+
+    const dx = this.targetX - this.x
+    const dy = this.targetY - this.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+
+    if (dist > 5) {
+      this.vx = (dx / dist) * this.speed
+      this.vy = (dy / dist) * this.speed
+    } else {
+      this.vx = 0
+      this.vy = 0
+    }
+
+    this.x += this.vx * deltaTime
+    this.y += this.vy * deltaTime
+
+    this.x = Math.max(80, Math.min(this.game.width - 80, this.x))
+    this.y = Math.max(80, Math.min(this.game.height * 0.5, this.y))
+
+    this.attackTimer -= deltaTime
+    if (this.attackTimer <= 0) {
+      this.attack()
+      this.attackInterval = 1.5 - this.phase * 0.2
+      this.attackTimer = this.attackInterval
+    }
+
+    if (this.charging) {
+      this.chargingTimer += deltaTime
+      this.glowIntensity = Math.sin(this.chargingTimer * 10) * 0.5 + 0.5
+
+      if (this.chargingTimer > 1) {
+        this.charging = false
+        this.executeAttack()
+      }
+    }
+
+    if (this.weakPointActive) {
+      this.weakPointTimer -= deltaTime
+      if (this.weakPointTimer <= 0) {
+        this.weakPointActive = false
+      }
+    } else {
+      if (Math.random() < 0.003) {
+        this.weakPointActive = true
+        this.weakPointTimer = 3
+      }
+    }
+
+    this.animationTimer += deltaTime
+    if (this.animationTimer > 0.1) {
+      this.animationFrame = (this.animationFrame + 1) % 4
+      this.animationTimer = 0
+    }
+
+    this.wingAngle += deltaTime * 8
+    this.rotationAngle += deltaTime * 0.5
+
+    if (this.flashTimer > 0) {
+      this.flashTimer -= deltaTime
+    }
+  }
+
+  private onPhaseChange(): void {
+    this.game.flash("red", 0.3)
+    this.game.addScreenShake(0.4)
+
+    this.movementPattern = (this.movementPattern + 1) % 4
+    this.movementTimer = 0
+
+    this.attackPattern = this.phase
+
+    this.speed = 100 + this.phase * 30
+
+    for (let i = 0; i < 50; i++) {
+      const angle = Math.random() * Math.PI * 2
+      const speed = Math.random() * 300 + 100
+      const colors = ["#f00", "#f90", "#ff0"]
+      const color = colors[Math.floor(Math.random() * colors.length)]
+
+      this.game.particles.push(
+        new Particle(this.x, this.y, Math.cos(angle) * speed, Math.sin(angle) * speed, color, 0.8, 6),
+      )
+    }
+  }
+
+  private attack(): void {
+    this.charging = true
+    this.chargingTimer = 0
+    this.attackPattern = (this.attackPattern + 1) % 12
+  }
+
+  private executeAttack(): void {
+    const patterns = [
+      this.spiralStorm.bind(this),
+      this.shotgunBlast.bind(this),
+      this.verticalColumns.bind(this),
+      this.circleBarrage.bind(this),
+      this.waveFormation.bind(this),
+      this.aimedShots.bind(this),
+      this.rotatingCannon.bind(this),
+      this.rainChaos.bind(this),
       this.crossPattern.bind(this),
-      this.randomPattern.bind(this),
-      this.burstPattern.bind(this, playerX, playerY),
-      this.helix.bind(this),
-      this.spreadShot.bind(this, playerX, playerY),
-      this.chainShot.bind(this),
-      this.spiralAimed.bind(this, playerX, playerY),
+      this.homingEggs.bind(this),
+      this.doubleHelix.bind(this),
+      this.machineGun.bind(this),
     ]
 
-    // Base pattern (always fires)
-    const basePattern = allPatterns[this.type % 12]
-    bullets.push(...basePattern())
-
-    this.activePatternCount = 1
-    this.patternCooldownMultiplier = 1
-
-    if (this.phase >= 1) {
-      // Phase 1: Add 1 extra pattern (max 2 total)
-      const secondaryPattern = allPatterns[(this.patternIndex + 1) % 12]
-      bullets.push(...secondaryPattern())
-      this.activePatternCount = 2
-      this.patternCooldownMultiplier = 0.7 // Faster pattern rotation
-    }
-    if (this.phase >= 2) {
-      // Phase 2: Still max 2, but rotate faster
-      this.patternCooldownMultiplier = 0.5
-    }
-    if (this.phase >= 3) {
-      // Phase 3: Max 2 patterns, fastest rotation
-      this.patternCooldownMultiplier = 0.3
-    }
-
-    return bullets
+    const pattern = patterns[this.attackPattern % patterns.length]
+    pattern()
   }
 
-  private spiralPattern(): Bullet[] {
-    const bullets: Bullet[] = []
-    const count = 12 + this.phase * 4
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2 + this.angle
-      const speed = 3 + this.phase
-      bullets.push(new Bullet(this.x, this.y, Math.cos(angle) * speed, Math.sin(angle) * speed, "#ffaa00", 8, false))
-    }
-    return bullets
-  }
-
-  private shotgunPattern(): Bullet[] {
-    const bullets: Bullet[] = []
+  private spiralStorm(): void {
     const count = 8 + this.phase * 2
-    const spreadAngle = Math.PI / 3
     for (let i = 0; i < count; i++) {
-      const angle = -Math.PI / 2 + (i / (count - 1) - 0.5) * spreadAngle
-      const speed = 4 + this.phase
-      bullets.push(new Bullet(this.x, this.y, Math.cos(angle) * speed, Math.sin(angle) * speed, "#ff6600", 8, false))
+      setTimeout(() => {
+        const angle = (i / count) * Math.PI * 2 + this.rotationAngle
+        const speed = 150
+        this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
+      }, i * 50)
     }
-    return bullets
   }
 
-  private circlePattern(): Bullet[] {
-    const bullets: Bullet[] = []
+  private shotgunBlast(): void {
+    const count = 10 + this.phase * 2
+    const spreadAngle = Math.PI / 2
+
+    for (let i = 0; i < count; i++) {
+      const angle = -spreadAngle / 2 + (i / count) * spreadAngle + Math.PI / 2
+      const speed = 250 + Math.random() * 100
+      this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
+    }
+  }
+
+  private verticalColumns(): void {
+    const columns = 5 + this.phase
+    for (let i = 0; i < columns; i++) {
+      const x = (this.game.width / (columns + 1)) * (i + 1)
+      for (let j = 0; j < 3; j++) {
+        setTimeout(() => {
+          this.game.enemyProjectiles.push(new Projectile(x, this.y, 0, 200, 15, this.game, "egg"))
+        }, j * 300)
+      }
+    }
+  }
+
+  private circleBarrage(): void {
     const count = 16 + this.phase * 4
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2
-      const speed = 2 + this.phase * 0.5
-      bullets.push(new Bullet(this.x, this.y, Math.cos(angle) * speed, Math.sin(angle) * speed, "#ff00ff", 8, false))
+      const speed = 180
+      this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
     }
-    return bullets
   }
 
-  private aimedPattern(playerX: number, playerY: number): Bullet[] {
-    const bullets: Bullet[] = []
+  private waveFormation(): void {
+    const count = 15
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const offset = Math.sin((i / count) * Math.PI * 2) * 200
+        this.game.enemyProjectiles.push(new Projectile(this.x + offset, this.y, 0, 200, 15, this.game, "egg"))
+      }, i * 100)
+    }
+  }
+
+  private aimedShots(): void {
+    const count = 5 + this.phase * 2
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const dx = this.game.player.x - this.x
+        const dy = this.game.player.y - this.y
+        const angle = Math.atan2(dy, dx)
+        const speed = 300
+        this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
+      }, i * 200)
+    }
+  }
+
+  private rotatingCannon(): void {
+    const count = 20 + this.phase * 5
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const angle = (i / count) * Math.PI * 4
+        const speed = 200
+        this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
+      }, i * 50)
+    }
+  }
+
+  private rainChaos(): void {
+    const count = 20 + this.phase * 5
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const x = Math.random() * this.game.width
+        const speed = 150 + Math.random() * 100
+        this.game.enemyProjectiles.push(
+          new Projectile(x, this.y, (Math.random() - 0.5) * 100, speed, 15, this.game, "egg"),
+        )
+      }, i * 50)
+    }
+  }
+
+  private crossPattern(): void {
+    const directions: Array<[number, number]> = [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+      [0.707, 0.707],
+      [-0.707, 0.707],
+      [0.707, -0.707],
+      [-0.707, -0.707],
+    ]
+
+    for (const [dx, dy] of directions) {
+      const speed = 200
+      this.spawnProjectile(dx * speed, dy * speed)
+    }
+  }
+
+  private homingEggs(): void {
     const count = 3 + this.phase
     for (let i = 0; i < count; i++) {
-      const angle = Math.atan2(playerY - this.y, playerX - this.x)
-      const spreadOffset = (i - count / 2) * 0.2
-      const speed = 5 + this.phase
-      bullets.push(
-        new Bullet(
+      setTimeout(() => {
+        const angle = Math.random() * Math.PI * 2
+        const speed = 150
+        const proj = new Projectile(
           this.x,
           this.y,
-          Math.cos(angle + spreadOffset) * speed,
-          Math.sin(angle + spreadOffset) * speed,
-          "#ff0000",
-          8,
-          false,
-        ),
-      )
+          Math.cos(angle) * speed,
+          Math.sin(angle) * speed,
+          15,
+          this.game,
+          "egg",
+        )
+        proj.homing = true
+        this.game.enemyProjectiles.push(proj)
+      }, i * 500)
     }
-    return bullets
   }
 
-  private wavePattern(): Bullet[] {
-    const bullets: Bullet[] = []
-    const count = 10 + this.phase * 3
+  private doubleHelix(): void {
+    const count = 30
     for (let i = 0; i < count; i++) {
-      const xOffset = (i / count - 0.5) * 600
-      const speed = 3 + this.phase * 0.5
-      bullets.push(new Bullet(this.x + xOffset, this.y, 0, speed, "#00ff00", 8, false))
+      setTimeout(() => {
+        const angle1 = (i / count) * Math.PI * 4
+        const angle2 = angle1 + Math.PI
+        const speed = 180
+        const radius = 50
+
+        this.spawnProjectile(Math.cos(angle1) * speed + Math.cos(angle1 * 3) * radius, Math.sin(angle1) * speed)
+        this.spawnProjectile(Math.cos(angle2) * speed + Math.cos(angle2 * 3) * radius, Math.sin(angle2) * speed)
+      }, i * 50)
     }
-    return bullets
   }
 
-  private crossPattern(): Bullet[] {
-    const bullets: Bullet[] = []
-    const directions = [0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2]
-    const speed = 4 + this.phase
-    for (const angle of directions) {
-      for (let i = 0; i < 3 + this.phase; i++) {
-        bullets.push(
-          new Bullet(
-            this.x,
-            this.y,
-            Math.cos(angle) * speed * (1 + i * 0.3),
-            Math.sin(angle) * speed * (1 + i * 0.3),
-            "#00ffff",
+  private machineGun(): void {
+    const count = 30 + this.phase * 10
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const dx = this.game.player.x - this.x
+        const dy = this.game.player.y - this.y
+        const angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.3
+        const speed = 350
+        this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
+      }, i * 30)
+    }
+  }
+
+  private spawnProjectile(vx: number, vy: number): void {
+    this.game.enemyProjectiles.push(new Projectile(this.x, this.y, vx, vy, 15, this.game, "egg"))
+  }
+
+  isWeakPointHit(x: number, y: number): boolean {
+    if (!this.weakPointActive) return false
+
+    const wpX = this.x + this.weakPointX
+    const wpY = this.y + this.weakPointY
+    const dist = Math.sqrt((x - wpX) ** 2 + (y - wpY) ** 2)
+
+    return dist < 15
+  }
+
+  takeDamage(damage: number, isCritical = false): void {
+    const actualDamage = isCritical ? damage * 3 : damage
+    this.health -= actualDamage
+    this.flashTimer = 0.1
+
+    this.game.ui.updateBossHealth(this.health / this.maxHealth)
+    this.game.ui.showDamage(actualDamage, this.x, this.y, isCritical)
+
+    if (this.health < this.maxHealth * 0.5) {
+      for (let i = 0; i < 3; i++) {
+        const angle = Math.random() * Math.PI * 2
+        const speed = Math.random() * 50 + 25
+        this.game.particles.push(
+          new Particle(
+            this.x + (Math.random() - 0.5) * this.width,
+            this.y + (Math.random() - 0.5) * this.height,
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed - 50,
+            "#444",
+            1,
             8,
-            false,
           ),
         )
       }
     }
-    return bullets
   }
 
-  private randomPattern(): Bullet[] {
-    const bullets: Bullet[] = []
-    const count = 15 + this.phase * 5
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2
-      const speed = 2 + Math.random() * 3 + this.phase
-      bullets.push(new Bullet(this.x, this.y, Math.cos(angle) * speed, Math.sin(angle) * speed, "#ff88ff", 8, false))
-    }
-    return bullets
-  }
-
-  private burstPattern(playerX: number, playerY: number): Bullet[] {
-    const bullets: Bullet[] = []
-    const angle = Math.atan2(playerY - this.y, playerX - this.x)
-    const bursts = 5 + this.phase * 2
-    for (let i = 0; i < bursts; i++) {
-      const spreadAngle = (i - bursts / 2) * 0.15
-      const speed = 6 + this.phase
-      bullets.push(
-        new Bullet(
-          this.x,
-          this.y,
-          Math.cos(angle + spreadAngle) * speed,
-          Math.sin(angle + spreadAngle) * speed,
-          "#ffff00",
-          8,
-          false,
-        ),
-      )
-    }
-    return bullets
-  }
-
-  private helix(): Bullet[] {
-    const bullets: Bullet[] = []
-    const count = 8 + this.phase * 3
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 4 + this.angle
-      const speed = 3.5 + this.phase * 0.5
-      bullets.push(new Bullet(this.x, this.y, Math.cos(angle) * speed, Math.sin(angle) * speed, "#ff00ff", 8, false))
-    }
-    return bullets
-  }
-
-  private spreadShot(playerX: number, playerY: number): Bullet[] {
-    const bullets: Bullet[] = []
-    const angle = Math.atan2(playerY - this.y, playerX - this.x)
-    const spreadCount = 7 + this.phase * 2
-    const spreadAngle = Math.PI / 4
-
-    for (let i = 0; i < spreadCount; i++) {
-      const offset = (i - spreadCount / 2) * (spreadAngle / spreadCount)
-      const speed = 4 + this.phase * 0.5
-      bullets.push(
-        new Bullet(
-          this.x,
-          this.y,
-          Math.cos(angle + offset) * speed,
-          Math.sin(angle + offset) * speed,
-          "#00ffff",
-          8,
-          false,
-        ),
-      )
-    }
-    return bullets
-  }
-
-  private chainShot(): Bullet[] {
-    const bullets: Bullet[] = []
-    const chains = 3 + this.phase
-    const bulletsPerChain = 4 + this.phase
-
-    for (let c = 0; c < chains; c++) {
-      const chainAngle = (c / chains) * Math.PI * 2
-      for (let i = 0; i < bulletsPerChain; i++) {
-        const speed = 2 + i * 0.5 + this.phase * 0.3
-        bullets.push(
-          new Bullet(this.x, this.y, Math.cos(chainAngle) * speed, Math.sin(chainAngle) * speed, "#ffaa00", 8, false),
-        )
-      }
-    }
-    return bullets
-  }
-
-  private spiralAimed(playerX: number, playerY: number): Bullet[] {
-    const bullets: Bullet[] = []
-    const baseAngle = Math.atan2(playerY - this.y, playerX - this.x)
-    const count = 10 + this.phase * 3
-
-    for (let i = 0; i < count; i++) {
-      const angle = baseAngle + (i / count) * Math.PI * 2 + this.angle * 0.5
-      const speed = 3 + this.phase * 0.5
-      bullets.push(new Bullet(this.x, this.y, Math.cos(angle) * speed, Math.sin(angle) * speed, "#ff6600", 8, false))
-    }
-    return bullets
-  }
-
-  draw(ctx: CanvasRenderingContext2D) {
+  render(ctx: CanvasRenderingContext2D): void {
     ctx.save()
+
     ctx.translate(this.x, this.y)
 
-    const size = 50
-    const wingFlap = Math.sin(this.angle * 3) * 10
+    if (this.flashTimer > 0) {
+      ctx.shadowColor = "#fff"
+      ctx.shadowBlur = 30
+    } else {
+      ctx.shadowColor = "#f00"
+      ctx.shadowBlur = 20
+    }
 
-    // Shadow
-    ctx.fillStyle = "rgba(0, 0, 0, 0.3)"
-    ctx.beginPath()
-    ctx.ellipse(0, size + 10, size * 1.2, size * 0.3, 0, 0, Math.PI * 2)
-    ctx.fill()
+    if (this.charging) {
+      ctx.shadowColor = "#ff0"
+      ctx.shadowBlur = 40 * this.glowIntensity
+    }
 
-    const colors = [
-      { wing: "#8b00ff", body: "#aa00ff", glow: "#aa00ff" },
-      { wing: "#00ff88", body: "#00ffaa", glow: "#00ffaa" },
-      { wing: "#ffaa00", body: "#ffcc00", glow: "#ffcc00" },
-      { wing: "#ff0088", body: "#ff0099", glow: "#ff0099" },
-      { wing: "#ff0000", body: "#ff3333", glow: "#ff3333" },
-      { wing: "#00aaff", body: "#00ccff", glow: "#00ccff" },
-      { wing: "#88ff00", body: "#aaff00", glow: "#aaff00" },
-      { wing: "#ff00ff", body: "#ff33ff", glow: "#ff33ff" },
-    ]
-    const color = colors[this.type % 8]
-
-    // Wings
-    ctx.fillStyle = color.wing
-    ctx.beginPath()
-    ctx.ellipse(-size - wingFlap, 0, size * 0.8, size * 0.6, -0.4, 0, Math.PI * 2)
-    ctx.fill()
+    const wingFlap = Math.sin(this.wingAngle) * 0.4
 
     ctx.beginPath()
-    ctx.ellipse(size + wingFlap, 0, size * 0.8, size * 0.6, 0.4, 0, Math.PI * 2)
+    ctx.ellipse(-this.width / 3, 0, this.width / 2.5, this.height / 1.8, -wingFlap, 0, Math.PI * 2)
+    const wingGradient1 = ctx.createRadialGradient(-this.width / 3, 0, 0, -this.width / 3, 0, this.width / 2.5)
+    wingGradient1.addColorStop(0, "#f90")
+    wingGradient1.addColorStop(1, "#f00")
+    ctx.fillStyle = wingGradient1
     ctx.fill()
-
-    // Body
-    ctx.fillStyle = color.body
-    ctx.beginPath()
-    ctx.ellipse(0, 0, size, size * 1.2, 0, 0, Math.PI * 2)
-    ctx.fill()
-
-    // Glow effect
-    ctx.shadowBlur = 20
-    ctx.shadowColor = color.glow
-    ctx.strokeStyle = "#ffffff"
+    ctx.strokeStyle = "#ff0"
     ctx.lineWidth = 3
     ctx.stroke()
 
-    // Eyes (glowing)
-    ctx.shadowBlur = 10
-    ctx.fillStyle = "#ff0000"
     ctx.beginPath()
-    ctx.arc(-15, -10, 6, 0, Math.PI * 2)
-    ctx.arc(15, -10, 6, 0, Math.PI * 2)
+    ctx.ellipse(this.width / 3, 0, this.width / 2.5, this.height / 1.8, wingFlap, 0, Math.PI * 2)
+    const wingGradient2 = ctx.createRadialGradient(this.width / 3, 0, 0, this.width / 3, 0, this.width / 2.5)
+    wingGradient2.addColorStop(0, "#f90")
+    wingGradient2.addColorStop(1, "#f00")
+    ctx.fillStyle = wingGradient2
+    ctx.fill()
+    ctx.strokeStyle = "#ff0"
+    ctx.lineWidth = 3
+    ctx.stroke()
+
+    ctx.beginPath()
+    ctx.ellipse(0, 0, this.width / 2.5, this.height / 2, 0, 0, Math.PI * 2)
+
+    const bodyGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius)
+    bodyGradient.addColorStop(0, "#ff0")
+    bodyGradient.addColorStop(0.5, "#f90")
+    bodyGradient.addColorStop(1, "#f00")
+    ctx.fillStyle = bodyGradient
+    ctx.fill()
+    ctx.strokeStyle = "#fff"
+    ctx.lineWidth = 4
+    ctx.stroke()
+
+    ctx.strokeStyle = "#0ff"
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(-20, -10, 8, 0, Math.PI * 2)
+    ctx.arc(20, -10, 8, 0, Math.PI * 2)
+    ctx.stroke()
+
+    ctx.beginPath()
+    ctx.arc(0, -this.height / 2.5, this.width / 3.5, 0, Math.PI * 2)
+    ctx.fillStyle = "#f90"
+    ctx.fill()
+    ctx.strokeStyle = "#fff"
+    ctx.lineWidth = 3
+    ctx.stroke()
+
+    ctx.fillStyle = "#f00"
+    ctx.beginPath()
+    ctx.moveTo(-10, -this.height / 2.5 - 10)
+    ctx.lineTo(0, -this.height / 2.5 - 25)
+    ctx.lineTo(10, -this.height / 2.5 - 10)
+    ctx.closePath()
+    ctx.fill()
+    ctx.strokeStyle = "#ff0"
+    ctx.lineWidth = 2
+    ctx.stroke()
+
+    ctx.fillStyle = "#f00"
+    ctx.beginPath()
+    ctx.arc(-12, -this.height / 2.5, 6, 0, Math.PI * 2)
+    ctx.arc(12, -this.height / 2.5, 6, 0, Math.PI * 2)
     ctx.fill()
 
-    // Crown/accessories
-    ctx.shadowBlur = 0
-    ctx.fillStyle = "#ffff00"
+    ctx.fillStyle = "#000"
     ctx.beginPath()
-    ctx.moveTo(-10, -size)
-    ctx.lineTo(-5, -size - 10)
-    ctx.lineTo(0, -size)
-    ctx.lineTo(5, -size - 10)
-    ctx.lineTo(10, -size)
-    ctx.lineTo(0, -size + 5)
+    ctx.arc(-12, -this.height / 2.5, 3, 0, Math.PI * 2)
+    ctx.arc(12, -this.height / 2.5, 3, 0, Math.PI * 2)
+    ctx.fill()
+
+    ctx.fillStyle = "#ff0"
+    ctx.beginPath()
+    ctx.moveTo(0, -this.height / 3)
+    ctx.lineTo(-8, -this.height / 4)
+    ctx.lineTo(8, -this.height / 4)
     ctx.closePath()
     ctx.fill()
 
-    // Damage cracks
-    if (this.health < this.maxHealth * 0.5) {
-      ctx.strokeStyle = "#000000"
+    if (this.weakPointActive) {
+      ctx.save()
+      const pulse = Math.sin(Date.now() / 100) * 0.3 + 0.7
+      ctx.globalAlpha = pulse
+      ctx.fillStyle = "#f00"
+      ctx.shadowColor = "#f00"
+      ctx.shadowBlur = 20
+      ctx.beginPath()
+      ctx.arc(this.weakPointX, this.weakPointY, 10, 0, Math.PI * 2)
+      ctx.fill()
+
+      ctx.strokeStyle = "#ff0"
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(this.weakPointX, this.weakPointY, 15, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.restore()
+    }
+
+    const healthPercent = this.health / this.maxHealth
+    if (healthPercent < 0.7) {
+      ctx.strokeStyle = "#000"
       ctx.lineWidth = 2
       ctx.beginPath()
       ctx.moveTo(-20, -10)
-      ctx.lineTo(-10, 10)
+      ctx.lineTo(-30, 5)
       ctx.moveTo(20, -10)
-      ctx.lineTo(10, 10)
+      ctx.lineTo(30, 5)
+      ctx.stroke()
+    }
+
+    if (healthPercent < 0.3) {
+      ctx.beginPath()
+      ctx.moveTo(0, 20)
+      ctx.lineTo(-15, 35)
+      ctx.moveTo(0, 20)
+      ctx.lineTo(15, 35)
       ctx.stroke()
     }
 

@@ -1,9 +1,39 @@
-class Background {
+interface Star {
+  x: number
+  y: number
+  size: number
+  speed: number
+  brightness: number
+  twinkleSpeed: number
+  layer: number
+}
+
+interface Nebula {
+  x: number
+  y: number
+  size: number
+  speed: number
+  colors: string[]
+  rotation: number
+  rotationSpeed: number
+}
+
+interface Planet {
+  x: number
+  y: number
+  size: number
+  speed: number
+  color: string
+  rings: boolean
+  rotation: number
+}
+
+export class Background {
   private width: number
   private height: number
-  private stars: any[] = []
-  private nebulas: any[] = []
-  private planets: any[] = []
+  private stars: Star[] = []
+  private nebulas: Nebula[] = []
+  private planets: Planet[] = []
 
   constructor(width: number, height: number) {
     this.width = width
@@ -14,7 +44,7 @@ class Background {
     this.initPlanets()
   }
 
-  private initStars() {
+  private initStars(): void {
     // Far stars (slow)
     for (let i = 0; i < 50; i++) {
       this.stars.push({
@@ -55,7 +85,7 @@ class Background {
     }
   }
 
-  private initNebulas() {
+  private initNebulas(): void {
     for (let i = 0; i < 3; i++) {
       const colors = [
         ["#1a0033", "#330066", "#660099"],
@@ -75,7 +105,7 @@ class Background {
     }
   }
 
-  private initPlanets() {
+  private initPlanets(): void {
     for (let i = 0; i < 2; i++) {
       const planetTypes = [
         { color: "#f90", rings: false },
@@ -98,7 +128,7 @@ class Background {
     }
   }
 
-  update(deltaTime: number) {
+  update(deltaTime: number): void {
     // Update stars
     for (const star of this.stars) {
       star.y += star.speed * deltaTime
@@ -133,7 +163,7 @@ class Background {
     }
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
+  render(ctx: CanvasRenderingContext2D): void {
     // Space gradient background
     const gradient = ctx.createLinearGradient(0, 0, 0, this.height)
     gradient.addColorStop(0, "#000011")
@@ -263,5 +293,3 @@ class Background {
     return "#" + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)
   }
 }
-
-export { Background }

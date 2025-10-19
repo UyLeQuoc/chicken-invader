@@ -85,3 +85,33 @@ canvas {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
+
+/* Game Transition Animations */
+@keyframes fadeInOut {
+  0%, 100% { 
+    opacity: 0; 
+    transform: scale(0.5);
+  }
+  20%, 80% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+}
+
+@keyframes borderPulse {
+  0%, 100% { 
+    border-width: 20px;
+  }
+  50% { 
+    border-width: 30px;
+  }
+}
+
+@keyframes warningFlash {
+  0%, 100% { 
+    background: rgba(255, 0, 0, 0.1);
+  }
+  50% { 
+    background: rgba(255, 0, 0, 0.3);
+  }
+}

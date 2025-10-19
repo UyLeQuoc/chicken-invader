@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from "react"
 import { Game } from "@/lib/game"
 import { Button } from "@/components/ui/button"
 import { Play, Pause, RotateCcw, SkipForward, Zap } from "lucide-react"
-import { getTopScores, submitScore, type LeaderboardEntry } from "@/lib/leaderboard"
+import { getTopScores, submitScore, type LeaderboardEntry } from "@/lib/actions/leaderboard"
 
 export function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const gameRef = useRef<Game | null>(null)
   const [gameState, setGameState] = useState<
-    "menu" | "ship-select" | "playing" | "paused" | "gameover" | "instructions" | "boss-complete" | "leaderboard-submit"
+    "menu" | "playing" | "paused" | "gameover" | "instructions" | "leaderboard-submit"
   >("menu")
   const [score, setScore] = useState(0)
   const [level, setLevel] = useState(1)
@@ -19,7 +19,6 @@ export function GameCanvas() {
   const [weaponLevel, setWeaponLevel] = useState(1)
   const [shield, setShield] = useState(0)
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 1200, height: 800 })
-  const [selectedShip, setSelectedShip] = useState<"bullet" | "explosive" | "laser" | null>(null)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [playerName, setPlayerName] = useState("")
   const [submitting, setSubmitting] = useState(false)
@@ -65,7 +64,6 @@ export function GameCanvas() {
       onWeaponLevelUpdate: setWeaponLevel,
       onShieldUpdate: setShield,
       onGameOver: () => setGameState("leaderboard-submit"),
-      onBossDefeated: () => setGameState("boss-complete"),
     })
 
     return () => {
@@ -74,11 +72,6 @@ export function GameCanvas() {
   }, [canvasDimensions])
 
   const handleStartGame = () => {
-    setGameState("ship-select")
-  }
-
-  const handleShipSelect = (ship: "bullet" | "explosive" | "laser") => {
-    setSelectedShip(ship)
     setGameState("instructions")
   }
 
@@ -89,14 +82,7 @@ export function GameCanvas() {
     setLives(3)
     setWeaponLevel(1)
     setShield(0)
-    gameRef.current?.start(selectedShip || "bullet")
-  }
-
-  const handleBossComplete = () => {
-    setWeaponLevel(1)
-    setShield(0)
-    setGameState("ship-select")
-    gameRef.current?.nextLevel()
+    gameRef.current?.start()
   }
 
   const handleNextLevel = () => {
@@ -112,11 +98,11 @@ export function GameCanvas() {
   }
 
   const handleSubmitScore = async () => {
-    if (!playerName.trim() || !selectedShip) return
+    if (!playerName.trim()) return
 
     setSubmitting(true)
     try {
-      await submitScore(playerName, selectedShip, score, level)
+      await submitScore(playerName, score, level)
       const updatedScores = await getTopScores(10)
       setLeaderboard(updatedScores)
       setPlayerName("")
@@ -132,13 +118,17 @@ export function GameCanvas() {
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
+      // Instructions screen - any key to continue
+      if (gameState === "instructions") {
+        startGame()
+        return
+      }
+
+      // Escape to pause during gameplay
       if (
         e.key === "Escape" &&
         gameState !== "menu" &&
         gameState !== "gameover" &&
-        gameState !== "instructions" &&
-        gameState !== "ship-select" &&
-        gameState !== "boss-complete" &&
         gameState !== "leaderboard-submit"
       ) {
         togglePause()
@@ -169,6 +159,43 @@ export function GameCanvas() {
           className="w-full h-full"
         />
 
+        {/* Level Transition */}
+        <div
+          id="level-transition"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center z-[1000] pointer-events-none"
+          style={{ display: "none" }}
+        >
+          <h1
+            id="transition-text"
+            className="text-5xl md:text-6xl font-bold text-cyan-400 tracking-[5px]"
+            style={{
+              textShadow: "0 0 30px rgba(0, 255, 255, 1), 0 0 60px rgba(0, 255, 255, 0.5)",
+              animation: "fadeInOut 2s ease-in-out",
+            }}
+          ></h1>
+        </div>
+
+        {/* Boss Warning */}
+        <div
+          id="boss-warning"
+          className="absolute inset-0 flex justify-center items-center z-[999] pointer-events-none"
+          style={{ display: "none" }}
+        >
+          <div
+            className="absolute inset-0 border-[20px] border-red-500"
+            style={{
+              boxShadow: "inset 0 0 50px rgba(255, 0, 0, 0.5)",
+              animation: "borderPulse 0.5s ease-in-out infinite, warningFlash 0.5s ease-in-out infinite",
+            }}
+          />
+          <h1
+            className="text-5xl md:text-7xl font-bold text-yellow-400 tracking-[10px] z-10"
+            style={{ textShadow: "0 0 30px rgba(255, 0, 0, 1), 0 0 60px rgba(255, 0, 0, 0.8)" }}
+          >
+            ⚠ BOSS WARNING ⚠
+          </h1>
+        </div>
+
         <div className="absolute top-3 left-3 right-3 flex justify-between items-start pointer-events-none">
           <div className="flex gap-2">
             {/* Score */}
@@ -193,59 +220,15 @@ export function GameCanvas() {
           </div>
 
           <div className="flex gap-2">
-            {/* Bullet Weapon */}
-            <div
-              className={`bg-black/90 border-2 px-2.5 py-1 rounded font-mono backdrop-blur-sm shadow-lg text-xs md:text-sm transition-all ${
-                selectedShip === "bullet" ? "border-cyan-400/60 text-cyan-400" : "border-gray-600/40 text-gray-600"
-              }`}
-            >
-              <div className="text-[8px] md:text-[10px] opacity-60 leading-tight">BULLET</div>
+            {/* Weapon Level */}
+            <div className="bg-black/90 border-2 border-cyan-400/60 px-2.5 py-1 rounded font-mono text-cyan-400 backdrop-blur-sm shadow-lg text-xs md:text-sm">
+              <div className="text-[8px] md:text-[10px] opacity-60 leading-tight">WEAPON</div>
               <div className="flex gap-0.5 mt-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div
                     key={i}
                     className={`w-1 md:w-1.5 h-2.5 md:h-3.5 border border-cyan-400/50 ${
                       i < weaponLevel ? "bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]" : "bg-black/50"
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Explosive Weapon */}
-            <div
-              className={`bg-black/90 border-2 px-2.5 py-1 rounded font-mono backdrop-blur-sm shadow-lg text-xs md:text-sm transition-all ${
-                selectedShip === "explosive"
-                  ? "border-orange-500/60 text-orange-500"
-                  : "border-gray-600/40 text-gray-600"
-              }`}
-            >
-              <div className="text-[8px] md:text-[10px] opacity-60 leading-tight">EXPLOSIVE</div>
-              <div className="flex gap-0.5 mt-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-1 md:w-1.5 h-2.5 md:h-3.5 border border-orange-500/50 ${
-                      i < weaponLevel ? "bg-orange-500 shadow-[0_0_6px_rgba(249,115,22,0.6)]" : "bg-black/50"
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Laser Weapon */}
-            <div
-              className={`bg-black/90 border-2 px-2.5 py-1 rounded font-mono backdrop-blur-sm shadow-lg text-xs md:text-sm transition-all ${
-                selectedShip === "laser" ? "border-green-400/60 text-green-400" : "border-gray-600/40 text-gray-600"
-              }`}
-            >
-              <div className="text-[8px] md:text-[10px] opacity-60 leading-tight">LASER</div>
-              <div className="flex gap-0.5 mt-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-1 md:w-1.5 h-2.5 md:h-3.5 border border-green-400/50 ${
-                      i < weaponLevel ? "bg-green-400 shadow-[0_0_6px_rgba(34,197,94,0.6)]" : "bg-black/50"
                     }`}
                   />
                 ))}
@@ -288,10 +271,9 @@ export function GameCanvas() {
                     <div className="space-y-2 font-mono text-sm">
                       {leaderboard.map((entry, index) => (
                         <div key={entry.id} className="flex justify-between items-center text-cyan-300">
-                          <span className="text-yellow-400 font-bold w-6">#{index + 1}</span>
-                          <span className="flex-1">{entry.name}</span>
-                          <span className="text-green-400">{entry.ship_type}</span>
-                          <span className="text-orange-400 w-20 text-right">{entry.score}</span>
+                          <span className="text-yellow-400 font-bold w-8">#{index + 1}</span>
+                          <span className="flex-1 text-left">{entry.name}</span>
+                          <span className="text-orange-400 w-24 text-right">{entry.score}</span>
                         </div>
                       ))}
                     </div>
@@ -310,135 +292,34 @@ export function GameCanvas() {
               START GAME
             </button>
           </div>
-        )}
-
-        {/* Ship Selection Screen */}
-        {gameState === "ship-select" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 pointer-events-auto">
-            <h2 className="text-4xl md:text-5xl font-bold text-cyan-400 mb-12">SELECT YOUR SHIP</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-              {/* Bullet Ship */}
-              <div
-                onClick={() => handleShipSelect("bullet")}
-                className="cursor-pointer p-6 border-2 border-cyan-400 rounded-lg hover:border-cyan-300 hover:bg-cyan-400/10 transition-all transform hover:scale-105"
-              >
-                <div className="text-center">
-                  <div className="text-5xl mb-4">🔫</div>
-                  <h3 className="text-2xl font-bold text-cyan-400 mb-2">BULLET SHIP</h3>
-                  <p className="text-cyan-300 text-sm mb-4">Standard rapid-fire weapon</p>
-                  <div className="text-xs text-cyan-200">
-                    <p>• Fast fire rate</p>
-                    <p>• Balanced damage</p>
-                    <p>• Spread pattern</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Explosive Ship */}
-              <div
-                onClick={() => handleShipSelect("explosive")}
-                className="cursor-pointer p-6 border-2 border-orange-500 rounded-lg hover:border-orange-400 hover:bg-orange-500/10 transition-all transform hover:scale-105"
-              >
-                <div className="text-center">
-                  <div className="text-5xl mb-4">💣</div>
-                  <h3 className="text-2xl font-bold text-orange-500 mb-2">EXPLOSIVE SHIP</h3>
-                  <p className="text-orange-300 text-sm mb-4">Single explosive bullets</p>
-                  <div className="text-xs text-orange-200">
-                    <p>• One bullet per shot</p>
-                    <p>• Grows with level</p>
-                    <p>• Area explosion</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Laser Ship */}
-              <div
-                onClick={() => handleShipSelect("laser")}
-                className="cursor-pointer p-6 border-2 border-green-400 rounded-lg hover:border-green-300 hover:bg-green-400/10 transition-all transform hover:scale-105"
-              >
-                <div className="text-center">
-                  <div className="text-5xl mb-4">🔫</div>
-                  <h3 className="text-2xl font-bold text-green-400 mb-2">LASER SHIP</h3>
-                  <p className="text-green-300 text-sm mb-4">Continuous beam weapon</p>
-                  <div className="text-xs text-green-200">
-                    <p>• Laser beam</p>
-                    <p>• Grows with level</p>
-                    <p>• Piercing damage</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Boss Complete Screen */}
-        {gameState === "boss-complete" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 pointer-events-auto">
-            <h2
-              className="text-5xl font-bold text-green-400 mb-4"
-              style={{ textShadow: "0 0 20px rgba(34,197,94,0.8)" }}
-            >
-              BOSS DEFEATED!
-            </h2>
-            <p className="text-2xl text-cyan-300 mb-8">Select a new ship to continue</p>
-            <button
-              onClick={handleBossComplete}
-              className="px-8 py-4 bg-green-500 text-black font-bold text-xl rounded hover:bg-green-400 transition-colors"
-            >
-              NEXT LEVEL
-            </button>
-          </div>
-        )}
+          )}
 
         {/* Instructions Screen */}
         {gameState === "instructions" && (
           <div className="absolute inset-0 flex flex-col items-center justify-start bg-black/95 overflow-y-auto p-4 md:p-8 pointer-events-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-cyan-400 mb-6">GAME RULES & POWER-UPS</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-cyan-400 mb-6">HOW TO PLAY</h2>
 
             <div className="max-w-2xl space-y-6 text-cyan-300 font-mono text-xs md:text-sm">
               <div>
                 <h3 className="text-lg md:text-xl text-yellow-400 mb-2">OBJECTIVE</h3>
-                <p>Defeat waves of chicken enemies and bosses! Every 3 levels, you'll face a boss.</p>
-                <p>Destroy all enemies to advance to the next level!</p>
+                <p>Defeat waves of chicken enemies and mighty bosses!</p>
+                <p className="mt-2">🎯 Fight through waves on odd levels (1, 3, 5...)</p>
+                <p>⚠️ Face a BOSS on every even level (2, 4, 6...)</p>
+                <p className="mt-2">Destroy all enemies to advance! Survive as long as you can!</p>
               </div>
 
               <div>
                 <h3 className="text-lg md:text-xl text-yellow-400 mb-2">CONTROLS</h3>
                 <div className="bg-black/50 p-3 border border-cyan-500 space-y-1">
                   <p>
-                    <span className="text-cyan-400">Desktop:</span> WASD / Arrow Keys to move
+                    <span className="text-cyan-400">Move:</span> WASD / Arrow Keys
                   </p>
                   <p>
                     <span className="text-cyan-400">Shoot:</span> SPACE or Mouse Click
                   </p>
                   <p>
-                    <span className="text-cyan-400">Mobile:</span> Touch to move (auto-shoot)
+                    <span className="text-cyan-400">Pause:</span> ESC
                   </p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg md:text-xl text-yellow-400 mb-2">YOUR SHIP</h3>
-                <div className="bg-black/50 p-3 border border-cyan-500">
-                  {selectedShip === "bullet" && (
-                    <>
-                      <p className="text-cyan-400 font-bold mb-2">🔫 BULLET SHIP</p>
-                      <p>Fast-firing standard weapon with spread patterns. Great for beginners!</p>
-                    </>
-                  )}
-                  {selectedShip === "explosive" && (
-                    <>
-                      <p className="text-orange-400 font-bold mb-2">💣 EXPLOSIVE SHIP</p>
-                      <p>Fires one explosive bullet per shot that grows bigger with level!</p>
-                    </>
-                  )}
-                  {selectedShip === "laser" && (
-                    <>
-                      <p className="text-green-400 font-bold mb-2">🔫 LASER SHIP</p>
-                      <p>Continuous laser beam that grows bigger and stronger with level!</p>
-                    </>
-                  )}
                 </div>
               </div>
 
@@ -446,28 +327,19 @@ export function GameCanvas() {
                 <h3 className="text-lg md:text-xl text-yellow-400 mb-2">POWER-UPS</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                   <div className="bg-black/50 p-2 border border-red-500">
-                    <span className="text-red-500">⚡ WEAPON</span> - Upgrade weapon level (Max 5)
-                  </div>
-                  <div className="bg-black/50 p-2 border border-cyan-500">
-                    <span className="text-cyan-500">🛡 SHIELD</span> - Add shield layer (Max 5)
+                    <span className="text-red-500">⚡ WEAPON</span> - Upgrade firepower (Max 5)
                   </div>
                   <div className="bg-black/50 p-2 border border-green-500">
-                    <span className="text-green-500">❤ HEALTH</span> - Gain extra life
+                    <span className="text-green-500">🛡 SHIELD</span> - Temporary protection
+                  </div>
+                  <div className="bg-black/50 p-2 border border-blue-500">
+                    <span className="text-blue-500">🔥 FIRE RATE</span> - Shoot faster
                   </div>
                   <div className="bg-black/50 p-2 border border-yellow-500">
-                    <span className="text-yellow-500">⭐ INVINCIBLE</span> - Immune to damage (8s)
-                  </div>
-                  <div className="bg-black/50 p-2 border border-yellow-500">
-                    <span className="text-yellow-500">⚡ SPEED</span> - Move faster (10s)
-                  </div>
-                  <div className="bg-black/50 p-2 border border-red-500">
-                    <span className="text-red-500">🔥 FIRE RATE</span> - Shoot faster (10s)
-                  </div>
-                  <div className="bg-black/50 p-2 border border-orange-500">
-                    <span className="text-orange-500">✨ MULTIPLIER</span> - 2x score (15s)
+                    <span className="text-yellow-500">⭐ SPREAD</span> - Multi-directional shots
                   </div>
                   <div className="bg-black/50 p-2 border border-purple-500">
-                    <span className="text-purple-500">⏱ SLOW-MO</span> - Slow time (8s)
+                    <span className="text-purple-500">💣 BOMB</span> - Clear screen attack
                   </div>
                 </div>
               </div>
@@ -475,20 +347,21 @@ export function GameCanvas() {
               <div>
                 <h3 className="text-lg md:text-xl text-yellow-400 mb-2">TIPS</h3>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>Bosses drop power-ups at 75%, 50%, and 25% health</li>
-                  <li>Shield pieces orbit around you and block enemy bullets</li>
-                  <li>Combine buffs for maximum effectiveness</li>
-                  <li>Keep moving to avoid enemy fire</li>
+                  <li>Enemies drop power-ups when defeated</li>
+                  <li>Bosses have multiple attack patterns - stay alert!</li>
+                  <li>Build combo chains for higher scores</li>
+                  <li>Your weapons reset after defeating a boss</li>
+                  <li>Keep moving to dodge incoming fire!</li>
                 </ul>
               </div>
             </div>
 
-            <button
-              onClick={startGame}
-              className="mt-8 px-8 py-4 bg-cyan-500 text-black font-bold text-xl rounded hover:bg-cyan-400 transition-colors"
+            <p
+              className="mt-8 text-xl md:text-2xl text-cyan-400 font-bold animate-pulse"
+              style={{ textShadow: "0 0 20px rgba(6,182,212,0.8)" }}
             >
-              CONTINUE
-            </button>
+              Press any key to continue
+            </p>
           </div>
         )}
 
@@ -517,11 +390,6 @@ export function GameCanvas() {
                       className="w-full px-3 py-2 bg-black/50 border border-cyan-400/60 rounded text-cyan-300 placeholder-cyan-600 focus:outline-none focus:border-cyan-400 font-mono"
                       onKeyPress={(e) => e.key === "Enter" && handleSubmitScore()}
                     />
-                  </div>
-
-                  <div>
-                    <p className="text-cyan-300 font-mono text-sm mb-2">SHIP TYPE</p>
-                    <p className="text-cyan-400 font-bold text-lg capitalize">{selectedShip}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
