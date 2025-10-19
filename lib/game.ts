@@ -29,6 +29,7 @@ export class Game {
   score: number
   level: number
   lives: number
+  bombs: number
   combo: number
   comboTimer: number
 
@@ -60,6 +61,7 @@ export class Game {
   onLevelUpdate: (level: number) => void
   onLivesUpdate: (lives: number) => void
   onWeaponLevelUpdate: (weaponLevel: number) => void
+  onBombsUpdate?: (bombs: number) => void
   onGameOver: () => void
     onBossHealthUpdate?: (health: number, maxHealth: number) => void
     onActiveEffectsUpdate?: (effects: Map<string, number>) => void
@@ -73,6 +75,7 @@ export class Game {
       onLevelUpdate: (level: number) => void
       onLivesUpdate: (lives: number) => void
       onWeaponLevelUpdate: (weaponLevel: number) => void
+      onBombsUpdate?: (bombs: number) => void
       onGameOver: () => void
       onBossHealthUpdate?: (health: number, maxHealth: number) => void
       onActiveEffectsUpdate?: (effects: Map<string, number>) => void
@@ -99,6 +102,7 @@ export class Game {
     this.score = 0
     this.level = 1
     this.lives = 3
+    this.bombs = 3
     this.combo = 0
     this.comboTimer = 0
 
@@ -129,6 +133,10 @@ export class Game {
       if (e.key === " ") {
         e.preventDefault()
         this.player.shooting = true
+      }
+      if (e.key.toLowerCase() === "b") {
+        e.preventDefault()
+        this.useBomb()
       }
     })
 
@@ -175,6 +183,7 @@ export class Game {
     this.score = 0
     this.level = 1
     this.lives = 3
+    this.bombs = 3
     this.combo = 0
     this.comboTimer = 0
 
@@ -182,6 +191,7 @@ export class Game {
     this.callbacks.onLevelUpdate(this.level)
     this.callbacks.onLivesUpdate(this.lives)
     this.callbacks.onWeaponLevelUpdate(1)
+    this.ui.updateBombs(this.bombs)
 
     this.lastTime = performance.now()
     this.startWave()
@@ -200,6 +210,7 @@ export class Game {
     this.score = 0
     this.level = 1
     this.lives = 3
+    this.bombs = 3
     this.combo = 0
     this.comboTimer = 0
 
@@ -211,6 +222,7 @@ export class Game {
     this.ui.updateScore(this.score)
     this.ui.updateLevel(this.level)
     this.ui.updateLives(this.lives)
+    this.ui.updateBombs(this.bombs)
 
     this.running = true
     this.startWave()
@@ -488,7 +500,7 @@ export class Game {
 
     this.createExplosion(enemy.x, enemy.y, enemy.type)
 
-    if (Math.random() < 0.15) {
+    if (Math.random() < 0.2) {
       const types: Array<
         | "weapon"
         | "firerate"
@@ -497,7 +509,9 @@ export class Game {
         | "speed"
         | "multiplier"
         | "slowmo"
-      > = ["weapon", "firerate", "health", "invincible", "speed", "multiplier", "slowmo"]
+        | "bomb"
+        | "shipspeed"
+      > = ["weapon", "weapon", "weapon", "firerate", "health", "invincible", "speed", "multiplier", "slowmo", "bomb", "shipspeed"]
       const type = types[Math.floor(Math.random() * types.length)]
       this.powerups.push(new Powerup(enemy.x, enemy.y, type))
     }
@@ -522,7 +536,9 @@ export class Game {
         | "speed"
         | "multiplier"
         | "slowmo"
-      > = ["weapon", "firerate", "health", "invincible", "speed", "multiplier", "slowmo"]
+        | "bomb"
+        | "shipspeed"
+      > = ["weapon", "weapon", "firerate", "health", "invincible", "speed", "multiplier", "slowmo", "bomb", "shipspeed"]
       const type = types[Math.floor(Math.random() * types.length)]
       const offsetX = (Math.random() - 0.5) * 60
       const offsetY = (Math.random() - 0.5) * 60
@@ -569,10 +585,12 @@ export class Game {
         this.player.upgradeFireRate()
         break
       case "health":
-        this.lives++
-        this.callbacks.onLivesUpdate(this.lives)
-        this.ui.updateLives(this.lives)
-        this.activeEffects.set("health", 0.5)
+        if (this.lives < 10) {
+          this.lives++
+          this.callbacks.onLivesUpdate(this.lives)
+          this.ui.updateLives(this.lives)
+          this.activeEffects.set("health", 0.5)
+        }
         break
       case "invincible":
         this.player.invincible = true
@@ -580,7 +598,7 @@ export class Game {
         this.activeEffects.set("invincible", 8)
         break
       case "speed":
-        this.player.speed = 450
+        this.player.speed = 600
         this.activeEffects.set("speed", 10)
         break
       case "multiplier":
@@ -589,7 +607,17 @@ export class Game {
         break
       case "slowmo":
         this.timeSlowFactor = 0.5
-        this.activeEffects.set("slowmo", 8)
+        this.activeEffects.set("slowmo", 5)
+        break
+      case "bomb":
+        this.bombs++
+        this.ui.updateBombs(this.bombs)
+        if (this.callbacks.onBombsUpdate) {
+          this.callbacks.onBombsUpdate(this.bombs)
+        }
+        break
+      case "shipspeed":
+        this.player.upgradeShipSpeed()
         break
     }
 
@@ -601,6 +629,39 @@ export class Game {
           this.callbacks.onScoreUpdate(this.score)
   }
 
+  useBomb(): void {
+    if (this.bombs > 0) {
+      this.bombs--
+      this.ui.updateBombs(this.bombs)
+      if (this.callbacks.onBombsUpdate) {
+        this.callbacks.onBombsUpdate(this.bombs)
+      }
+
+      this.enemyProjectiles = []
+
+      for (const e of this.enemies) {
+        e.takeDamage(50)
+        if (e.health <= 0) {
+          this.destroyEnemy(e)
+        }
+      }
+
+      for (const b of this.bosses) {
+        b.takeDamage(100)
+      }
+
+      this.flash("cyan", 0.8)
+      this.addScreenShake(0.8)
+
+      for (let i = 0; i < 100; i++) {
+        const angle = Math.random() * Math.PI * 2
+        const speed = Math.random() * 400 + 200
+        this.particles.push(
+          new Particle(this.width / 2, this.height / 2, Math.cos(angle) * speed, Math.sin(angle) * speed, "#0ff", 1, 8),
+        )
+      }
+    }
+  }
 
   private createExplosion(x: number, y: number, size = 1): void {
     const particleCount = 20 + size * 10

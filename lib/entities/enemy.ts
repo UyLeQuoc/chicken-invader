@@ -63,7 +63,7 @@ export class Enemy {
         break
     }
 
-    this.speed = 80 + Math.random() * 40
+    this.speed = 120 + Math.random() * 60
     this.vx = 0
     this.vy = this.speed
     this.pattern = Math.floor(Math.random() * 3)
@@ -127,7 +127,7 @@ export class Enemy {
     const angle = Math.atan2(dy, dx)
     const inaccuracy = (Math.random() - 0.5) * 0.5
 
-    const speed = 200
+    const speed = 300
     const vx = Math.cos(angle + inaccuracy) * speed
     const vy = Math.sin(angle + inaccuracy) * speed
 

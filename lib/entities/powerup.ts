@@ -55,6 +55,14 @@ export class Powerup {
         this.color = "#00ff00"
         this.label = "SLO"
         break
+      case "bomb":
+        this.color = "#ff8800"
+        this.label = "BOM"
+        break
+      case "shipspeed":
+        this.color = "#00ffaa"
+        this.label = "SPD+"
+        break
     }
   }
 
@@ -70,13 +78,16 @@ export class Powerup {
     ctx.save()
 
     ctx.translate(this.x, this.y + this.bobOffset)
-    ctx.rotate(this.rotation)
 
     const pulseSize = Math.sin(Date.now() / 200) * 3
     ctx.shadowColor = this.color
     ctx.shadowBlur = 20 + pulseSize
 
-    const size = 25
+    const size = 30
+    
+    // Draw rotating box
+    ctx.save()
+    ctx.rotate(this.rotation)
     const gradient = ctx.createLinearGradient(-size / 2, -size / 2, size / 2, size / 2)
     gradient.addColorStop(0, this.color)
     gradient.addColorStop(1, this.shadeColor(this.color, -40))
@@ -91,14 +102,16 @@ export class Powerup {
     ctx.strokeStyle = this.shadeColor(this.color, 40)
     ctx.lineWidth = 1
     ctx.strokeRect(-size / 2 + 3, -size / 2 + 3, size - 6, size - 6)
+    ctx.restore()
 
-    // Draw icon based on type
-    this.drawIcon(ctx)
+    // Draw emoji without rotation
+    this.drawEmoji(ctx)
 
+    // Draw sparkles with rotation
     const time = Date.now() / 500
     for (let i = 0; i < 4; i++) {
       const angle = (i / 4) * Math.PI * 2 + time
-      const dist = size / 2 + 10
+      const dist = size / 2 + 12
       const sparkleX = Math.cos(angle) * dist
       const sparkleY = Math.sin(angle) * dist
 
@@ -112,119 +125,45 @@ export class Powerup {
     ctx.restore()
   }
 
-  private drawIcon(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = "#fff"
-    ctx.strokeStyle = "#fff"
-    ctx.lineWidth = 2
-    ctx.lineCap = "round"
-    ctx.lineJoin = "round"
+  private drawEmoji(ctx: CanvasRenderingContext2D): void {
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
+    ctx.font = "24px Arial"
     ctx.shadowColor = "#000"
-    ctx.shadowBlur = 3
+    ctx.shadowBlur = 5
 
+    let emoji = ""
     switch (this.type) {
       case "weapon":
-        // Lightning bolt ⚡
-        ctx.beginPath()
-        ctx.moveTo(-2, -8)
-        ctx.lineTo(3, -1)
-        ctx.lineTo(0, -1)
-        ctx.lineTo(2, 8)
-        ctx.lineTo(-3, 1)
-        ctx.lineTo(0, 1)
-        ctx.closePath()
-        ctx.fill()
+        emoji = "⚡"
         break
-
       case "firerate":
-        // Fire 🔥
-        ctx.beginPath()
-        ctx.moveTo(0, -8)
-        ctx.bezierCurveTo(-4, -6, -5, -2, -3, 2)
-        ctx.bezierCurveTo(-2, 5, 0, 7, 0, 7)
-        ctx.bezierCurveTo(0, 7, 2, 5, 3, 2)
-        ctx.bezierCurveTo(5, -2, 4, -6, 0, -8)
-        ctx.fill()
-        // Inner flame
-        ctx.fillStyle = "#ff0"
-        ctx.beginPath()
-        ctx.moveTo(0, -4)
-        ctx.bezierCurveTo(-2, -3, -2, 0, -1, 2)
-        ctx.bezierCurveTo(0, 3, 0, 4, 0, 4)
-        ctx.bezierCurveTo(0, 4, 0, 3, 1, 2)
-        ctx.bezierCurveTo(2, 0, 2, -3, 0, -4)
-        ctx.fill()
+        emoji = "🔥"
         break
-
       case "health":
-        // Heart ❤
-        ctx.beginPath()
-        ctx.moveTo(0, -2)
-        ctx.bezierCurveTo(-4, -6, -6, -4, -6, -1)
-        ctx.bezierCurveTo(-6, 2, 0, 6, 0, 6)
-        ctx.bezierCurveTo(0, 6, 6, 2, 6, -1)
-        ctx.bezierCurveTo(6, -4, 4, -6, 0, -2)
-        ctx.fill()
+        emoji = "❤️"
         break
-
       case "invincible":
-        // Star ⭐
-        const invincibleSpikes = 5
-        const invincibleOuterRadius = 8
-        const invincibleInnerRadius = 3
-        ctx.beginPath()
-        for (let i = 0; i < invincibleSpikes * 2; i++) {
-          const radius = i % 2 === 0 ? invincibleOuterRadius : invincibleInnerRadius
-          const angle = (i * Math.PI) / invincibleSpikes - Math.PI / 2
-          const x = Math.cos(angle) * radius
-          const y = Math.sin(angle) * radius
-          if (i === 0) ctx.moveTo(x, y)
-          else ctx.lineTo(x, y)
-        }
-        ctx.closePath()
-        ctx.fill()
+        emoji = "⭐"
         break
-
       case "speed":
-        // Lightning bolt ⚡
-        ctx.beginPath()
-        ctx.moveTo(-2, -8)
-        ctx.lineTo(3, -1)
-        ctx.lineTo(0, -1)
-        ctx.lineTo(2, 8)
-        ctx.lineTo(-3, 1)
-        ctx.lineTo(0, 1)
-        ctx.closePath()
-        ctx.fill()
+        emoji = "💨"
         break
-
       case "multiplier":
-        // Multiply symbol ✨
-        ctx.beginPath()
-        ctx.moveTo(-6, -6)
-        ctx.lineTo(6, 6)
-        ctx.moveTo(6, -6)
-        ctx.lineTo(-6, 6)
-        ctx.stroke()
-        ctx.beginPath()
-        ctx.arc(0, 0, 8, 0, Math.PI * 2)
-        ctx.stroke()
+        emoji = "✨"
         break
-
       case "slowmo":
-        // Hourglass ⏱
-        ctx.beginPath()
-        ctx.moveTo(-6, -8)
-        ctx.lineTo(6, -8)
-        ctx.lineTo(0, -2)
-        ctx.lineTo(6, 4)
-        ctx.lineTo(6, 8)
-        ctx.lineTo(-6, 8)
-        ctx.lineTo(-6, 4)
-        ctx.lineTo(0, -2)
-        ctx.lineTo(-6, -8)
-        ctx.stroke()
+        emoji = "⏱️"
+        break
+      case "bomb":
+        emoji = "💣"
+        break
+      case "shipspeed":
+        emoji = "🚀"
         break
     }
+
+    ctx.fillText(emoji, 0, 0)
   }
 
   private shadeColor(color: string, percent: number): string {

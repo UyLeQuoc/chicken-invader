@@ -14,6 +14,8 @@ export type PowerupType =
   | "speed"
   | "multiplier"
   | "slowmo"
+  | "bomb"
+  | "shipspeed"
 
 export type ProjectileType = "bullet" | "laser" | "egg"
 

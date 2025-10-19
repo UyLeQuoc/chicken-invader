@@ -17,6 +17,7 @@ export function GameCanvas() {
   const [level, setLevel] = useState(1)
   const [lives, setLives] = useState(3)
   const [weaponLevel, setWeaponLevel] = useState(1)
+  const [bombs, setBombs] = useState(3)
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 1200, height: 800 })
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [playerName, setPlayerName] = useState("")
@@ -64,6 +65,7 @@ export function GameCanvas() {
       onLevelUpdate: setLevel,
       onLivesUpdate: setLives,
       onWeaponLevelUpdate: setWeaponLevel,
+      onBombsUpdate: setBombs,
       onGameOver: () => setGameState("leaderboard-submit"),
       onBossHealthUpdate: (health, maxHealth) => {
         setBossHealth(health)
@@ -89,6 +91,7 @@ export function GameCanvas() {
     setLevel(1)
     setLives(3)
     setWeaponLevel(1)
+    setBombs(3)
     gameRef.current?.start()
   }
 
@@ -191,55 +194,86 @@ export function GameCanvas() {
           </h1>
         </div>
 
-        <div className="absolute top-3 left-3 right-3 flex justify-between items-start pointer-events-none">
-          <div className="flex gap-2">
+        <div className="absolute top-4 left-4 right-4 flex justify-between items-start pointer-events-none">
+          <div className="flex gap-3">
             {/* Score */}
-            <div className="bg-black/90 border-2 border-cyan-400/60 px-2.5 py-1 rounded font-mono text-cyan-400 backdrop-blur-sm shadow-lg text-xs md:text-sm">
-              <div className="text-[8px] md:text-[10px] opacity-60 leading-tight">SCORE</div>
-              <div className="text-sm md:text-base font-bold leading-tight">{score.toString().padStart(8, "0")}</div>
+            <div className="bg-black/90 border-2 border-cyan-400 px-4 py-2 rounded-lg font-mono text-cyan-400 backdrop-blur-sm shadow-[0_0_20px_rgba(6,182,212,0.5)]">
+              <div className="text-xs opacity-80 leading-tight mb-1">SCORE</div>
+              <div className="text-xl font-bold leading-tight shadow-[0_0_10px_rgba(6,182,212,0.8)]">{score.toString().padStart(8, "0")}</div>
             </div>
 
-            {/* Level & Lives */}
-            <div className="bg-black/90 border-2 border-cyan-400/60 px-2.5 py-1 rounded font-mono text-cyan-400 backdrop-blur-sm shadow-lg text-xs md:text-sm">
-              <div className="text-[8px] md:text-[10px] opacity-60 leading-tight">LV {level}</div>
-              <div className="flex gap-0.5 mt-0.5">
-                {Array.from({ length: lives }).map((_, i) => (
+            {/* Level & Wave */}
+            <div className="bg-black/90 border-2 border-yellow-400 px-4 py-2 rounded-lg font-mono text-yellow-400 backdrop-blur-sm shadow-[0_0_20px_rgba(250,204,21,0.5)]">
+              <div className="text-xs opacity-80 leading-tight mb-1">LEVEL {level}</div>
+              <div className="text-base font-bold leading-tight shadow-[0_0_10px_rgba(250,204,21,0.8)]">
+                {level % 2 === 0 ? "⚠️ BOSS" : `WAVE ${Math.floor(level / 2) + 1}`}
+              </div>
+            </div>
+
+            {/* Lives */}
+            <div className="bg-black/90 border-2 border-red-400 px-4 py-2 rounded-lg font-mono text-red-400 backdrop-blur-sm shadow-[0_0_20px_rgba(248,113,113,0.5)]">
+              <div className="text-xs opacity-80 leading-tight mb-1">LIVES</div>
+              <div className="flex gap-1 mt-1 items-center">
+                {Array.from({ length: Math.min(lives, 10) }).map((_, i) => (
                   <div
                     key={i}
-                    className="w-2 md:w-3 h-2 md:h-3 bg-cyan-400 shadow-[0_0_4px_rgba(6,182,212,0.8)]"
+                    className="w-4 h-4 bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.8)]"
                     style={{ clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }}
                   />
                 ))}
+                {lives > 10 && <div className="text-base ml-1 font-bold">MAX</div>}
               </div>
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             {/* Weapon Level */}
-            <div className="bg-black/90 border-2 border-cyan-400/60 px-2.5 py-1 rounded font-mono text-cyan-400 backdrop-blur-sm shadow-lg text-xs md:text-sm">
-              <div className="text-[8px] md:text-[10px] opacity-60 leading-tight">WEAPON</div>
-              <div className="flex gap-0.5 mt-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-1 md:w-1.5 h-2.5 md:h-3.5 border border-cyan-400/50 ${
-                      i < weaponLevel ? "bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]" : "bg-black/50"
-                    }`}
-                  />
+            <div className="bg-black/90 border-2 border-purple-400 px-4 py-2 rounded-lg font-mono text-purple-400 backdrop-blur-sm shadow-[0_0_20px_rgba(192,132,252,0.5)]">
+              <div className="text-xs opacity-80 leading-tight mb-1">WEAPON LV</div>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="text-2xl font-bold shadow-[0_0_10px_rgba(192,132,252,0.8)]">
+                  {weaponLevel}
+                </div>
+                <div className="text-xs opacity-70">
+                  {(() => {
+                    const pattern = ((weaponLevel - 1) % 5) + 1
+                    const cycle = Math.floor((weaponLevel - 1) / 5) + 1
+                    return pattern === 5 ? `🔥 LASER C${cycle}` : `${pattern}× C${cycle}`
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Bombs */}
+            <div className="bg-black/90 border-2 border-orange-400 px-4 py-2 rounded-lg font-mono text-orange-400 backdrop-blur-sm shadow-[0_0_20px_rgba(251,146,60,0.5)]">
+              <div className="text-xs opacity-80 leading-tight mb-1">BOMBS [B]</div>
+              <div className="flex gap-1 mt-1">
+                {Array.from({ length: Math.min(bombs, 10) }).map((_, i) => (
+                  <div key={i} className="text-xl shadow-[0_0_8px_rgba(251,146,60,0.8)]">
+                    💣
+                  </div>
                 ))}
+                {bombs > 10 && <div className="text-base ml-1 font-bold">+{bombs - 10}</div>}
               </div>
             </div>
           </div>
         </div>
 
         {bossMaxHealth > 0 && (
-          <div className="absolute top-10 left-1/2 -translate-x-1/2 w-96 pointer-events-none">
-            <div className="bg-black/80 border-2 border-red-500 px-4 py-2 rounded">
-              <div className="text-red-500 font-mono text-sm mb-2 text-center">BOSS HEALTH</div>
-              <div className="w-full h-6 bg-black/50 border border-red-500 rounded overflow-hidden">
+          <div className="absolute top-4 right-4 w-[300px] pointer-events-none">
+            <div className="bg-black/90 border-2 border-red-500 px-3 py-2 rounded-lg shadow-[0_0_20px_rgba(239,68,68,0.5)]">
+              <div className="text-red-500 font-mono text-xs mb-2 text-center font-bold shadow-[0_0_8px_rgba(239,68,68,0.8)]">
+                ⚠️ BOSS
+              </div>
+              <div className="w-full h-4 bg-black/50 border border-red-500/50 rounded overflow-hidden shadow-inner">
                 <div
-                  className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all"
-                  style={{ width: `${(bossHealth / bossMaxHealth) * 100}%` }}
+                  className="h-full transition-all duration-300 shadow-[0_0_15px_rgba(239,68,68,0.6)]"
+                  style={{
+                    width: `${(bossHealth / bossMaxHealth) * 100}%`,
+                    background: `linear-gradient(90deg, 
+                      ${(bossHealth / bossMaxHealth) > 0.6 ? '#22c55e' : (bossHealth / bossMaxHealth) > 0.3 ? '#eab308' : '#ef4444'} 0%, 
+                      ${(bossHealth / bossMaxHealth) > 0.6 ? '#16a34a' : (bossHealth / bossMaxHealth) > 0.3 ? '#ca8a04' : '#dc2626'} 100%)`,
+                  }}
                 />
               </div>
               <div className="text-red-400 font-mono text-xs mt-1 text-center">
@@ -332,6 +366,9 @@ export function GameCanvas() {
                     <span className="text-cyan-400">Shoot:</span> SPACE or Mouse Click
                   </p>
                   <p>
+                    <span className="text-cyan-400">Bomb:</span> B (clears screen + damages all)
+                  </p>
+                  <p>
                     <span className="text-cyan-400">Pause:</span> ESC
                   </p>
                 </div>
@@ -341,37 +378,58 @@ export function GameCanvas() {
                 <h3 className="text-lg md:text-xl text-yellow-400 mb-2">POWER-UPS</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                   <div className="bg-black/50 p-2 border border-red-500">
-                    <span className="text-red-500">⚡ WEAPON</span> - Upgrade firepower (Max 5)
+                    <span className="text-red-500">⚡ WEAPON</span> - Upgrade firepower (Unlimited!)
                   </div>
                   <div className="bg-black/50 p-2 border border-blue-500">
                     <span className="text-blue-500">🔥 FIRE RATE</span> - Shoot faster
                   </div>
                   <div className="bg-black/50 p-2 border border-red-500">
-                    <span className="text-red-500">❤ HEALTH</span> - Gain extra life
+                    <span className="text-red-500">❤️ HEALTH</span> - Gain extra life
                   </div>
                   <div className="bg-black/50 p-2 border border-yellow-500">
                     <span className="text-yellow-500">⭐ INVINCIBLE</span> - Immune to damage (8s)
                   </div>
                   <div className="bg-black/50 p-2 border border-cyan-500">
-                    <span className="text-cyan-500">⚡ SPEED</span> - Move faster (10s)
+                    <span className="text-cyan-500">💨 SPEED</span> - Move faster (10s)
                   </div>
                   <div className="bg-black/50 p-2 border border-purple-500">
                     <span className="text-purple-500">✨ MULTIPLIER</span> - 2x score (15s)
                   </div>
                   <div className="bg-black/50 p-2 border border-green-500">
-                    <span className="text-green-500">⏱ SLOW-MO</span> - Slow time (8s)
+                    <span className="text-green-500">⏱️ SLOW-MO</span> - Slow time (8s)
                   </div>
+                  <div className="bg-black/50 p-2 border border-orange-500">
+                    <span className="text-orange-500">💣 BOMB</span> - Get extra bomb [B to use]
+                  </div>
+                  <div className="bg-black/50 p-2 border border-teal-500">
+                    <span className="text-teal-500">🚀 SHIP SPEED</span> - Permanent speed boost (Max 5)
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg md:text-xl text-yellow-400 mb-2">WEAPON SYSTEM</h3>
+                <div className="bg-black/50 p-3 border border-purple-500 mb-3">
+                  <p className="text-purple-300 font-bold">Repeating Pattern (Every 5 Levels):</p>
+                  <p className="text-sm mt-1">Level 1,6,11,16... → Single shot</p>
+                  <p className="text-sm">Level 2,7,12,17... → Double shot</p>
+                  <p className="text-sm">Level 3,8,13,18... → Triple shot</p>
+                  <p className="text-sm">Level 4,9,14,19... → Quad shot</p>
+                  <p className="text-sm">Level 5,10,15,20... → LASER BEAM 🔥</p>
+                  <p className="text-sm mt-2 text-yellow-300">Damage increases with each cycle!</p>
                 </div>
               </div>
 
               <div>
                 <h3 className="text-lg md:text-xl text-yellow-400 mb-2">TIPS</h3>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>Enemies drop power-ups when defeated</li>
-                  <li>Bosses drop power-ups at 75%, 50%, and 25% health</li>
+                  <li>Enemies drop power-ups when defeated (20% chance)</li>
+                  <li>Bosses drop 3 power-ups when defeated</li>
+                  <li>Ship speed can be upgraded up to 5 times permanently!</li>
+                  <li>Use bombs [B] to clear screen and damage all enemies</li>
+                  <li>Collect bomb powerups to get more bombs!</li>
                   <li>Bosses have multiple attack patterns - stay alert!</li>
                   <li>Build combo chains for higher scores</li>
-                  <li>Your weapons reset after defeating a boss</li>
                   <li>Combine buffs for maximum effectiveness</li>
                   <li>Keep moving to dodge incoming fire!</li>
                 </ul>
@@ -468,29 +526,6 @@ export function GameCanvas() {
           </div>
         )}
       </div>
-
-      {gameState === "paused" && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 pointer-events-auto">
-          <Button
-            onClick={togglePause}
-            variant="outline"
-            size="lg"
-            className="bg-black/70 border-cyan-500 text-cyan-400 hover:bg-cyan-500 hover:text-black font-mono"
-          >
-            <Play className="mr-2 h-4 w-4" />
-            Resume
-          </Button>
-          <Button
-            onClick={handleStartGame}
-            variant="outline"
-            size="lg"
-            className="bg-black/70 border-red-500 text-red-400 hover:bg-red-500 hover:text-black font-mono"
-          >
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Restart Game
-          </Button>
-        </div>
-      )}
     </div>
   )
 }
