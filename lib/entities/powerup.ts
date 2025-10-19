@@ -31,10 +31,6 @@ export class Powerup {
         this.color = "#f00"
         this.label = "W"
         break
-      case "firerate":
-        this.color = "#00f"
-        this.label = "F"
-        break
       case "health":
         this.color = "#f00"
         this.label = "HP"
@@ -58,10 +54,6 @@ export class Powerup {
       case "bomb":
         this.color = "#ff8800"
         this.label = "BOM"
-        break
-      case "shipspeed":
-        this.color = "#00ffaa"
-        this.label = "SPD+"
         break
     }
   }
@@ -137,9 +129,6 @@ export class Powerup {
       case "weapon":
         emoji = "⚡"
         break
-      case "firerate":
-        emoji = "🔥"
-        break
       case "health":
         emoji = "❤️"
         break
@@ -157,9 +146,6 @@ export class Powerup {
         break
       case "bomb":
         emoji = "💣"
-        break
-      case "shipspeed":
-        emoji = "🚀"
         break
     }
 

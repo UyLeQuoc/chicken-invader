@@ -18,8 +18,6 @@ export class Player {
   fireRate: number
   fireTimer: number
   weaponLevel: number
-  shipSpeedLevel: number
-  baseSpeed: number
   animationFrame: number
   animationTimer: number
   flashTimer: number
@@ -31,17 +29,15 @@ export class Player {
     this.width = 40
     this.height = 40
     this.hitRadius = 4
-    this.baseSpeed = 400
     this.speed = 400
     this.health = 1
     this.invincible = false
     this.invincibleTime = 0
     this.maxInvincibleTime = 2
     this.shooting = false
-    this.fireRate = 0.12
+    this.fireRate = 0.30
     this.fireTimer = 0
     this.weaponLevel = 1
-    this.shipSpeedLevel = 0
     this.animationFrame = 0
     this.animationTimer = 0
     this.flashTimer = 0
@@ -66,6 +62,9 @@ export class Player {
 
     this.x = Math.max(20, Math.min(this.game.width - 20, this.x))
     this.y = Math.max(20, Math.min(this.game.height - 20, this.y))
+
+    // Update fire rate based on weapon level
+    this.updateFireRate()
 
     this.fireTimer -= deltaTime
     if (this.shooting && this.fireTimer <= 0) {
@@ -105,35 +104,50 @@ export class Player {
     }
   }
 
-  shoot(): void {
-    const baseDamage = 10
-    const damage = baseDamage + Math.floor(this.weaponLevel / 5) * 10 + (this.weaponLevel % 5) * 5
+  updateFireRate(): void {
+    // Fire rate improves with weapon level: 0.25s at level 1 -> 0.08s at level 20
+    const baseFireRate = 0.30
+    const minFireRate = 0.1
+    const fireRateReduction = (baseFireRate - minFireRate) / 19 // 19 levels from 1 to 20
+    this.fireRate = Math.max(minFireRate, baseFireRate - (this.weaponLevel - 1) * fireRateReduction)
+  }
 
-    // Pattern repeats every 5 levels
+  shoot(): void {
+    // Damage scales with level: 10 at level 1 -> 180 at level 20
+    const damage = 10 + (this.weaponLevel - 1) * 9
+
+    // Pattern repeats every 5 levels (max 20 levels = 4 cycles)
     const patternLevel = ((this.weaponLevel - 1) % 5) + 1
 
+    // Small spread angle increases slightly with level
+    const maxSpreadAngle = 0.08 // ~4.5 degrees max
+    const spreadAngle = (this.weaponLevel / 20) * maxSpreadAngle
+
     if (patternLevel === 5) {
-      // Laser
+      // Laser - no spread
       this.game.projectiles.push(new Projectile(this.x, this.y - 20, 0, -1000, damage, this.game, "laser"))
     } else {
       const bulletCount = patternLevel
+      const speed = 800
 
-      if (bulletCount === 1) {
-        this.game.projectiles.push(new Projectile(this.x, this.y - 20, 0, -800, damage, this.game))
-      } else {
-        for (let i = 0; i < bulletCount; i++) {
-          const offset = (i - (bulletCount - 1) / 2) * 15
-          this.game.projectiles.push(
-            new Projectile(
-              this.x + offset,
-              this.y - 20,
-              0,
-              -800,
-              damage,
-              this.game,
-            ),
-          )
-        }
+      for (let i = 0; i < bulletCount; i++) {
+        const offset = (i - (bulletCount - 1) / 2) * 15
+        
+        // Add slight random spread
+        const randomSpread = (Math.random() - 0.5) * spreadAngle
+        const vx = Math.sin(randomSpread) * speed
+        const vy = -Math.cos(randomSpread) * speed
+        
+        this.game.projectiles.push(
+          new Projectile(
+            this.x + offset,
+            this.y - 20,
+            vx,
+            vy,
+            damage,
+            this.game,
+          ),
+        )
       }
     }
 
@@ -145,19 +159,10 @@ export class Player {
   }
 
   upgradeWeapon(): void {
-    this.weaponLevel++
-    this.game.ui.updateWeaponLevel(this.weaponLevel)
-  }
-
-  upgradeFireRate(): void {
-    this.fireRate = Math.max(0.05, this.fireRate - 0.02)
-  }
-
-  upgradeShipSpeed(): void {
-    if (this.shipSpeedLevel < 5) {
-      this.shipSpeedLevel++
-      this.baseSpeed = 400 + this.shipSpeedLevel * 60
-      this.speed = this.baseSpeed
+    if (this.weaponLevel < 20) {
+      this.weaponLevel++
+      this.updateFireRate()
+      this.game.ui.updateWeaponLevel(this.weaponLevel)
     }
   }
 
@@ -167,6 +172,7 @@ export class Player {
     this.invincibleTime = this.maxInvincibleTime
     this.flashTimer = 0.3
     this.weaponLevel = Math.max(1, this.weaponLevel - 1)
+    this.updateFireRate()
     this.game.ui.updateWeaponLevel(this.weaponLevel)
 
     for (let i = 0; i < 20; i++) {

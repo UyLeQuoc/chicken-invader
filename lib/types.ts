@@ -8,14 +8,12 @@ export interface GameObject {
 
 export type PowerupType =
   | "weapon"
-  | "firerate"
   | "health"
   | "invincible"
   | "speed"
   | "multiplier"
   | "slowmo"
   | "bomb"
-  | "shipspeed"
 
 export type ProjectileType = "bullet" | "laser" | "egg"
 

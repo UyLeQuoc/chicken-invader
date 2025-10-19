@@ -147,7 +147,7 @@ export class Background {
         colors: colorSets[i % colorSets.length],
         rotation: Math.random() * Math.PI * 2,
         rotationSpeed: (Math.random() - 0.5) * 0.15,
-        opacity: 0.2 + Math.random() * 0.2,
+        opacity: 0.1 + Math.random() * 0.05,
       })
     }
   }

@@ -503,15 +503,13 @@ export class Game {
     if (Math.random() < 0.2) {
       const types: Array<
         | "weapon"
-        | "firerate"
         | "health"
         | "invincible"
         | "speed"
         | "multiplier"
         | "slowmo"
         | "bomb"
-        | "shipspeed"
-      > = ["weapon", "weapon", "weapon", "firerate", "health", "invincible", "speed", "multiplier", "slowmo", "bomb", "shipspeed"]
+      > = ["weapon", "weapon", "weapon", "weapon", "health", "invincible", "speed", "multiplier", "slowmo", "bomb"]
       const type = types[Math.floor(Math.random() * types.length)]
       this.powerups.push(new Powerup(enemy.x, enemy.y, type))
     }
@@ -530,15 +528,13 @@ export class Game {
     for (let i = 0; i < 3; i++) {
       const types: Array<
         | "weapon"
-        | "firerate"
         | "health"
         | "invincible"
         | "speed"
         | "multiplier"
         | "slowmo"
         | "bomb"
-        | "shipspeed"
-      > = ["weapon", "weapon", "firerate", "health", "invincible", "speed", "multiplier", "slowmo", "bomb", "shipspeed"]
+      > = ["weapon", "weapon", "health", "invincible", "speed", "multiplier", "slowmo", "bomb"]
       const type = types[Math.floor(Math.random() * types.length)]
       const offsetX = (Math.random() - 0.5) * 60
       const offsetY = (Math.random() - 0.5) * 60
@@ -581,11 +577,8 @@ export class Game {
       case "weapon":
         this.player.upgradeWeapon()
         break
-      case "firerate":
-        this.player.upgradeFireRate()
-        break
       case "health":
-        if (this.lives < 10) {
+        if (this.lives < 5) {
           this.lives++
           this.callbacks.onLivesUpdate(this.lives)
           this.ui.updateLives(this.lives)
@@ -610,14 +603,13 @@ export class Game {
         this.activeEffects.set("slowmo", 5)
         break
       case "bomb":
-        this.bombs++
-        this.ui.updateBombs(this.bombs)
-        if (this.callbacks.onBombsUpdate) {
-          this.callbacks.onBombsUpdate(this.bombs)
+        if (this.bombs < 5) {
+          this.bombs++
+          this.ui.updateBombs(this.bombs)
+          if (this.callbacks.onBombsUpdate) {
+            this.callbacks.onBombsUpdate(this.bombs)
+          }
         }
-        break
-      case "shipspeed":
-        this.player.upgradeShipSpeed()
         break
     }
 

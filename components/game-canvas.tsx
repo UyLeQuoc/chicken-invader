@@ -214,32 +214,47 @@ export function GameCanvas() {
             <div className="bg-black/90 border-2 border-red-400 px-4 py-2 rounded-lg font-mono text-red-400 backdrop-blur-sm shadow-[0_0_20px_rgba(248,113,113,0.5)]">
               <div className="text-xs opacity-80 leading-tight mb-1">LIVES</div>
               <div className="flex gap-1 mt-1 items-center">
-                {Array.from({ length: Math.min(lives, 10) }).map((_, i) => (
+                {Array.from({ length: Math.min(lives, 5) }).map((_, i) => (
                   <div
                     key={i}
                     className="w-4 h-4 bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.8)]"
                     style={{ clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)" }}
                   />
                 ))}
-                {lives > 10 && <div className="text-base ml-1 font-bold">MAX</div>}
+                {lives >= 5 && <div className="text-base ml-1 font-bold">MAX</div>}
               </div>
             </div>
           </div>
 
           <div className="flex gap-3">
             {/* Weapon Level */}
-            <div className="bg-black/90 border-2 border-purple-400 px-4 py-2 rounded-lg font-mono text-purple-400 backdrop-blur-sm shadow-[0_0_20px_rgba(192,132,252,0.5)]">
-              <div className="text-xs opacity-80 leading-tight mb-1">WEAPON LV</div>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="text-2xl font-bold shadow-[0_0_10px_rgba(192,132,252,0.8)]">
-                  {weaponLevel}
-                </div>
+            <div className="bg-black/90 border-2 border-purple-400 px-4 py-3 rounded-lg font-mono text-purple-400 backdrop-blur-sm shadow-[0_0_20px_rgba(192,132,252,0.5)] min-w-[180px]">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs opacity-80 leading-tight">WEAPON</div>
                 <div className="text-xs opacity-70">
                   {(() => {
                     const pattern = ((weaponLevel - 1) % 5) + 1
-                    const cycle = Math.floor((weaponLevel - 1) / 5) + 1
-                    return pattern === 5 ? `🔥 LASER C${cycle}` : `${pattern}× C${cycle}`
+                    return pattern === 5 ? "🔥 LASER" : `${pattern}× SHOT`
                   })()}
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-3xl font-bold shadow-[0_0_15px_rgba(192,132,252,0.9)]">
+                  {weaponLevel}
+                </div>
+                <div className="flex-1">
+                  <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden border border-purple-400/50">
+                    <div
+                      className="h-full transition-all duration-300 shadow-[0_0_10px_rgba(192,132,252,0.8)]"
+                      style={{
+                        width: `${(weaponLevel / 20) * 100}%`,
+                        background: "linear-gradient(90deg, #a855f7 0%, #ec4899 100%)",
+                      }}
+                    />
+                  </div>
+                  <div className="text-[10px] mt-1 opacity-60 text-center">
+                    {weaponLevel < 20 ? `${weaponLevel}/20` : "MAX"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -247,13 +262,13 @@ export function GameCanvas() {
             {/* Bombs */}
             <div className="bg-black/90 border-2 border-orange-400 px-4 py-2 rounded-lg font-mono text-orange-400 backdrop-blur-sm shadow-[0_0_20px_rgba(251,146,60,0.5)]">
               <div className="text-xs opacity-80 leading-tight mb-1">BOMBS [B]</div>
-              <div className="flex gap-1 mt-1">
-                {Array.from({ length: Math.min(bombs, 10) }).map((_, i) => (
+              <div className="flex gap-1 mt-1 items-center">
+                {Array.from({ length: Math.min(bombs, 5) }).map((_, i) => (
                   <div key={i} className="text-xl shadow-[0_0_8px_rgba(251,146,60,0.8)]">
                     💣
                   </div>
                 ))}
-                {bombs > 10 && <div className="text-base ml-1 font-bold">+{bombs - 10}</div>}
+                {bombs >= 5 && <div className="text-base ml-1 font-bold">MAX</div>}
               </div>
             </div>
           </div>
@@ -378,13 +393,10 @@ export function GameCanvas() {
                 <h3 className="text-lg md:text-xl text-yellow-400 mb-2">POWER-UPS</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                   <div className="bg-black/50 p-2 border border-red-500">
-                    <span className="text-red-500">⚡ WEAPON</span> - Upgrade firepower (Unlimited!)
-                  </div>
-                  <div className="bg-black/50 p-2 border border-blue-500">
-                    <span className="text-blue-500">🔥 FIRE RATE</span> - Shoot faster
+                    <span className="text-red-500">⚡ WEAPON</span> - Upgrade firepower (Max 20!)
                   </div>
                   <div className="bg-black/50 p-2 border border-red-500">
-                    <span className="text-red-500">❤️ HEALTH</span> - Gain extra life
+                    <span className="text-red-500">❤️ HEALTH</span> - Gain extra life (Max 5)
                   </div>
                   <div className="bg-black/50 p-2 border border-yellow-500">
                     <span className="text-yellow-500">⭐ INVINCIBLE</span> - Immune to damage (8s)
@@ -396,42 +408,55 @@ export function GameCanvas() {
                     <span className="text-purple-500">✨ MULTIPLIER</span> - 2x score (15s)
                   </div>
                   <div className="bg-black/50 p-2 border border-green-500">
-                    <span className="text-green-500">⏱️ SLOW-MO</span> - Slow time (8s)
+                    <span className="text-green-500">⏱️ SLOW-MO</span> - Slow time (5s)
                   </div>
                   <div className="bg-black/50 p-2 border border-orange-500">
-                    <span className="text-orange-500">💣 BOMB</span> - Get extra bomb [B to use]
-                  </div>
-                  <div className="bg-black/50 p-2 border border-teal-500">
-                    <span className="text-teal-500">🚀 SHIP SPEED</span> - Permanent speed boost (Max 5)
+                    <span className="text-orange-500">💣 BOMB</span> - Get extra bomb (Max 5)
                   </div>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-lg md:text-xl text-yellow-400 mb-2">WEAPON SYSTEM</h3>
+                <h3 className="text-lg md:text-xl text-yellow-400 mb-2">WEAPON SYSTEM (MAX 20)</h3>
                 <div className="bg-black/50 p-3 border border-purple-500 mb-3">
-                  <p className="text-purple-300 font-bold">Repeating Pattern (Every 5 Levels):</p>
-                  <p className="text-sm mt-1">Level 1,6,11,16... → Single shot</p>
-                  <p className="text-sm">Level 2,7,12,17... → Double shot</p>
-                  <p className="text-sm">Level 3,8,13,18... → Triple shot</p>
-                  <p className="text-sm">Level 4,9,14,19... → Quad shot</p>
-                  <p className="text-sm">Level 5,10,15,20... → LASER BEAM 🔥</p>
-                  <p className="text-sm mt-2 text-yellow-300">Damage increases with each cycle!</p>
+                  <p className="text-purple-300 font-bold mb-2">Pattern Repeats Every 5 Levels:</p>
+                  <div className="grid grid-cols-2 gap-1 text-sm mb-2">
+                    <div>Lv 1,6,11,16 → 1× Shot</div>
+                    <div>Lv 2,7,12,17 → 2× Shot</div>
+                    <div>Lv 3,8,13,18 → 3× Shot</div>
+                    <div>Lv 4,9,14,19 → 4× Shot</div>
+                    <div className="col-span-2">Lv 5,10,15,20 → 🔥 LASER</div>
+                  </div>
+                  <p className="text-xs mt-2 text-yellow-300">📈 Each level: +9 DMG, auto faster fire rate!</p>
+                  <p className="text-xs text-cyan-300">Lv 1: 10 DMG, 0.30s | Lv 20: 180 DMG, 0.10s</p>
+                  <p className="text-xs text-purple-300 mt-1">✨ Bullets have slight spread - increases with level!</p>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-lg md:text-xl text-yellow-400 mb-2">TIPS</h3>
+                <h3 className="text-lg md:text-xl text-yellow-400 mb-2">BOSS BATTLES</h3>
+                <div className="bg-black/50 p-3 border border-red-500">
+                  <p className="text-red-300 mb-2">⚠️ Bosses appear every 2 levels and get stronger!</p>
+                  <p className="text-sm text-yellow-300">• Health increases with game progression</p>
+                  <p className="text-sm text-yellow-300">• 18 different attack patterns to master</p>
+                  <p className="text-sm text-yellow-300">• Watch for phase changes - attacks intensify!</p>
+                  <p className="text-sm text-cyan-300 mt-2">Tip: Save your bombs for tough boss phases!</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg md:text-xl text-yellow-400 mb-2">TIPS & STRATEGIES</h3>
                 <ul className="list-disc list-inside space-y-1">
                   <li>Enemies drop power-ups when defeated (20% chance)</li>
-                  <li>Bosses drop 3 power-ups when defeated</li>
-                  <li>Ship speed can be upgraded up to 5 times permanently!</li>
-                  <li>Use bombs [B] to clear screen and damage all enemies</li>
-                  <li>Collect bomb powerups to get more bombs!</li>
-                  <li>Bosses have multiple attack patterns - stay alert!</li>
-                  <li>Build combo chains for higher scores</li>
-                  <li>Combine buffs for maximum effectiveness</li>
-                  <li>Keep moving to dodge incoming fire!</li>
+                  <li>Bosses drop 3 power-ups - prioritize weapon upgrades!</li>
+                  <li>💣 Bombs: Clear screen + damage all enemies and bosses</li>
+                  <li>🛡️ Lives and Bombs capped at 5 - manage resources wisely!</li>
+                  <li>⚡ Fire rate auto-improves with weapon level (no powerup needed)</li>
+                  <li>💨 SPEED buff (10s) - Great for dodging dense bullet patterns</li>
+                  <li>⏱️ SLOW-MO (5s) - Bullet time for precision dodging</li>
+                  <li>⭐ INVINCIBLE (8s) - Farm aggressively or survive boss rage</li>
+                  <li>🎯 Build combo chains for higher scores and multipliers</li>
+                  <li>🌀 Keep moving! Bosses have homing and predictive shots</li>
                 </ul>
               </div>
             </div>

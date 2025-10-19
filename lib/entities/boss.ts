@@ -54,10 +54,14 @@ export class Boss {
     this.height = 120
     this.radius = 60
 
-    this.maxHealth = 500 + type * 200
+    // Health scales with both boss type and game level
+    const baseHealth = 500
+    const typeBonus = type * 100
+    const levelBonus = Math.floor((game.level - 2) / 2) * 300 
+    this.maxHealth = baseHealth + typeBonus + levelBonus
     this.health = this.maxHealth
 
-    this.speed = 100
+    this.speed = 120
     this.vx = 0
     this.vy = 100
 
@@ -69,7 +73,7 @@ export class Boss {
     this.movementPattern = 0
 
     this.attackTimer = 0
-    this.attackInterval = 2
+    this.attackInterval = 1.5
     this.attackPattern = 0
 
     this.animationFrame = 0
@@ -211,7 +215,7 @@ export class Boss {
 
     this.attackPattern = this.phase
 
-    this.speed = 100 + this.phase * 30
+    this.speed = 120 + this.phase * 40
 
     for (let i = 0; i < 50; i++) {
       const angle = Math.random() * Math.PI * 2
@@ -228,7 +232,7 @@ export class Boss {
   private attack(): void {
     this.charging = true
     this.chargingTimer = 0
-    this.attackPattern = (this.attackPattern + 1) % 12
+    this.attackPattern = (this.attackPattern + 1) % 18
   }
 
   private executeAttack(): void {
@@ -245,6 +249,12 @@ export class Boss {
       this.homingEggs.bind(this),
       this.doubleHelix.bind(this),
       this.machineGun.bind(this),
+      this.laserSweep.bind(this),
+      this.burstFire.bind(this),
+      this.meteorShower.bind(this),
+      this.spiralLaser.bind(this),
+      this.diamondPattern.bind(this),
+      this.chaosStorm.bind(this),
     ]
 
     const pattern = patterns[this.attackPattern % patterns.length]
@@ -256,9 +266,9 @@ export class Boss {
     for (let i = 0; i < count; i++) {
       setTimeout(() => {
         const angle = (i / count) * Math.PI * 2 + this.rotationAngle
-        const speed = 150
+        const speed = 160
         this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
-      }, i * 50)
+      }, i * 60)
     }
   }
 
@@ -268,7 +278,7 @@ export class Boss {
 
     for (let i = 0; i < count; i++) {
       const angle = -spreadAngle / 2 + (i / count) * spreadAngle + Math.PI / 2
-      const speed = 250 + Math.random() * 100
+      const speed = 250 + Math.random() * 80
       this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
     }
   }
@@ -286,7 +296,7 @@ export class Boss {
   }
 
   private circleBarrage(): void {
-    const count = 16 + this.phase * 4
+    const count = 12 + this.phase * 3
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2
       const speed = 180
@@ -305,15 +315,15 @@ export class Boss {
   }
 
   private aimedShots(): void {
-    const count = 5 + this.phase * 2
+    const count = 4 + this.phase
     for (let i = 0; i < count; i++) {
       setTimeout(() => {
         const dx = this.game.player.x - this.x
         const dy = this.game.player.y - this.y
         const angle = Math.atan2(dy, dx)
-        const speed = 300
+        const speed = 280
         this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
-      }, i * 200)
+      }, i * 300)
     }
   }
 
@@ -329,15 +339,15 @@ export class Boss {
   }
 
   private rainChaos(): void {
-    const count = 20 + this.phase * 5
+    const count = 12 + this.phase * 3
     for (let i = 0; i < count; i++) {
       setTimeout(() => {
         const x = Math.random() * this.game.width
-        const speed = 150 + Math.random() * 100
+        const speed = 140 + Math.random() * 80
         this.game.enemyProjectiles.push(
-          new Projectile(x, this.y, (Math.random() - 0.5) * 100, speed, 15, this.game, "egg"),
+          new Projectile(x, this.y, (Math.random() - 0.5) * 80, speed, 15, this.game, "egg"),
         )
-      }, i * 50)
+      }, i * 80)
     }
   }
 
@@ -396,15 +406,117 @@ export class Boss {
   }
 
   private machineGun(): void {
-    const count = 30 + this.phase * 10
+    const count = 25 + this.phase * 8
     for (let i = 0; i < count; i++) {
       setTimeout(() => {
         const dx = this.game.player.x - this.x
         const dy = this.game.player.y - this.y
         const angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.3
-        const speed = 350
+        const speed = 320
+        this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
+      }, i * 40)
+    }
+  }
+
+  private laserSweep(): void {
+    const sweeps = 1 + this.phase
+    for (let sweep = 0; sweep < sweeps; sweep++) {
+      const startAngle = sweep % 2 === 0 ? 0 : Math.PI
+      const count = 20
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          const angle = startAngle + (i / count) * Math.PI
+          const speed = 220
+          for (let j = 0; j < 2; j++) {
+            setTimeout(() => {
+              this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
+            }, j * 60)
+          }
+        }, sweep * 1500 + i * 30)
+      }
+    }
+  }
+
+  private burstFire(): void {
+    const bursts = 4 + this.phase
+    for (let burst = 0; burst < bursts; burst++) {
+      setTimeout(() => {
+        const dx = this.game.player.x - this.x
+        const dy = this.game.player.y - this.y
+        const baseAngle = Math.atan2(dy, dx)
+        
+        for (let i = 0; i < 5; i++) {
+          const angle = baseAngle + (i - 2) * 0.2
+          const speed = 280
+          this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
+        }
+      }, burst * 500)
+    }
+  }
+
+  private meteorShower(): void {
+    const count = 15 + this.phase * 5
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const x = Math.random() * this.game.width
+        const speed = 180 + Math.random() * 100
+        const angle = Math.PI / 2 + (Math.random() - 0.5) * 0.3
+        this.game.enemyProjectiles.push(
+          new Projectile(x, 0, Math.cos(angle) * speed, Math.sin(angle) * speed, 15, this.game, "egg"),
+        )
+      }, i * 60)
+    }
+  }
+
+  private spiralLaser(): void {
+    const rotations = 2 + this.phase
+    const count = 30 * rotations
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const angle = (i / count) * Math.PI * 2 * rotations
+        const speed = 200
         this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
       }, i * 30)
+    }
+  }
+
+  private diamondPattern(): void {
+    const layers = 3 + this.phase
+    for (let layer = 0; layer < layers; layer++) {
+      setTimeout(() => {
+        const sides = 4
+        const points = 8
+        for (let i = 0; i < points; i++) {
+          const angle = (i / points) * Math.PI * 2 + Math.PI / 4
+          const speed = 180 + layer * 40
+          this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
+        }
+      }, layer * 200)
+    }
+  }
+
+  private chaosStorm(): void {
+    const waves = 3 + this.phase
+    for (let wave = 0; wave < waves; wave++) {
+      setTimeout(() => {
+        // Circular burst
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2
+          const speed = 180
+          this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
+        }
+        
+        // Aimed shots
+        setTimeout(() => {
+          for (let i = 0; i < 3; i++) {
+            const dx = this.game.player.x - this.x
+            const dy = this.game.player.y - this.y
+            const angle = Math.atan2(dy, dx) + (i - 1) * 0.25
+            const speed = 260
+            this.spawnProjectile(Math.cos(angle) * speed, Math.sin(angle) * speed)
+          }
+        }, 250)
+      }, wave * 700)
     }
   }
 
