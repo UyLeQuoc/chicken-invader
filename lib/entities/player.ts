@@ -113,6 +113,9 @@ export class Player {
   }
 
   shoot(): void {
+    // Play shoot sound
+    this.game.audio.play("shoot", 0.2)
+
     // Damage scales with level: 10 at level 1 -> 180 at level 20
     const damage = 10 + (this.weaponLevel - 1) * 9
 

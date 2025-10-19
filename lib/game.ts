@@ -7,6 +7,7 @@ import { Background } from "./entities/background"
 import { UI } from "./entities/ui"
 import type { Projectile } from "./entities/projectile"
 import { checkCircleCollision } from "./collision"
+import { getAudioManager, type AudioManager } from "./audio-manager"
 
 export class Game {
   canvas: HTMLCanvasElement
@@ -25,6 +26,7 @@ export class Game {
 
   background: Background
   ui: UI
+  audio!: AudioManager
 
   score: number
   level: number
@@ -98,6 +100,10 @@ export class Game {
 
     this.background = new Background(this.width, this.height)
     this.ui = new UI(this)
+    this.audio = getAudioManager()
+
+    // Start menu music
+    this.audio.playMusic("bgmMenu")
 
     this.score = 0
     this.level = 1
@@ -179,6 +185,12 @@ export class Game {
   }
 
   start(shipType: "bullet" | "explosive" | "laser" = "bullet"): void {
+    this.audio.play("menuSelect", 0.5)
+    
+    // Stop menu music and start game music
+    this.audio.stopMusic("bgmMenu")
+    this.audio.playMusic("bgmGame")
+    
     this.running = true
     this.score = 0
     this.level = 1
@@ -237,6 +249,9 @@ export class Game {
       this.spawnBoss()
       }, 3000)
     } else {
+      if (this.level > 1) {
+        this.audio.play("levelComplete", 0.5)
+      }
       this.ui.showLevelTransition(`LEVEL ${this.level} - WAVE`)
       setTimeout(() => {
         this.waveActive = true
@@ -247,6 +262,13 @@ export class Game {
   }
 
   private spawnBoss(): void {
+    this.audio.play("bossWarning", 0.6)
+    
+    // Switch to boss music with higher volume
+    this.audio.stopMusic("bgmGame")
+    this.audio.setMusicVolume(1) // Increase boss music volume
+    this.audio.playMusic("bgmBoss")
+    
     const bossType = Math.floor((this.level - 2) / 2) % 4
     const boss = new Boss(this.width / 2, -100, bossType, this)
     this.bosses.push(boss)
@@ -487,6 +509,8 @@ export class Game {
   }
 
   private destroyEnemy(enemy: Enemy): void {
+    this.audio.play("enemyExplosion", 0.4)
+    
     this.score += enemy.points * (this.combo + 1) * this.scoreMultiplier
     this.ui.updateScore(this.score)
     this.callbacks.onScoreUpdate(this.score)
@@ -552,11 +576,17 @@ export class Game {
       this.level++
       this.ui.updateLevel(this.level)
       this.callbacks.onLevelUpdate(this.level)
+      // Switch back to game music after boss
+      this.audio.stopMusic("bgmBoss")
+      this.audio.setMusicVolume(0.3) // Reset to normal volume
+      this.audio.playMusic("bgmGame")
       setTimeout(() => this.startWave(), 2000)
     }, 3000)
   }
 
   private playerHit(): void {
+    this.audio.play("playerHit", 0.5)
+    
     this.player.takeDamage()
     this.lives--
     this.ui.updateLives(this.lives)
@@ -573,6 +603,8 @@ export class Game {
   }
 
   private collectPowerup(powerup: Powerup): void {
+    this.audio.play("powerupCollect", 0.5)
+    
     switch (powerup.type) {
       case "weapon":
         this.player.upgradeWeapon()
@@ -623,6 +655,8 @@ export class Game {
 
   useBomb(): void {
     if (this.bombs > 0) {
+      this.audio.play("bomb", 0.7)
+      
       this.bombs--
       this.ui.updateBombs(this.bombs)
       if (this.callbacks.onBombsUpdate) {
@@ -720,6 +754,11 @@ export class Game {
   }
 
   private gameOver(): void {
+    this.audio.play("gameOver", 0.6)
+    
+    // Stop all music
+    this.audio.stopAllMusic()
+    
     this.running = false
     this.ui.showGameOver(this.score)
     this.callbacks.onGameOver()

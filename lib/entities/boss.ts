@@ -535,6 +535,8 @@ export class Boss {
   }
 
   takeDamage(damage: number, isCritical = false): void {
+    this.game.audio.play("bossWarning", 0.2)
+    
     const actualDamage = isCritical ? damage * 3 : damage
     this.health -= actualDamage
     this.flashTimer = 0.1
