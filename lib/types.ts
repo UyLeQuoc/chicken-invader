@@ -9,9 +9,6 @@ export interface GameObject {
 export type PowerupType =
   | "weapon"
   | "firerate"
-  | "spread"
-  | "shield"
-  | "bomb"
   | "health"
   | "invincible"
   | "speed"

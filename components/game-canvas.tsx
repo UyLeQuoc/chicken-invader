@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Game } from "@/lib/game"
 import { Button } from "@/components/ui/button"
-import { Play, Pause, RotateCcw, SkipForward, Zap } from "lucide-react"
+import { Play, Pause, RotateCcw } from "lucide-react"
 import { getTopScores, submitScore, type LeaderboardEntry } from "@/lib/actions/leaderboard"
 
 export function GameCanvas() {
@@ -17,7 +17,6 @@ export function GameCanvas() {
   const [level, setLevel] = useState(1)
   const [lives, setLives] = useState(3)
   const [weaponLevel, setWeaponLevel] = useState(1)
-  const [shield, setShield] = useState(0)
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 1200, height: 800 })
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [playerName, setPlayerName] = useState("")
@@ -25,7 +24,7 @@ export function GameCanvas() {
   const [leaderboardAvailable, setLeaderboardAvailable] = useState(true)
   const [bossHealth, setBossHealth] = useState(0)
   const [bossMaxHealth, setBossMaxHealth] = useState(100)
-  const [activeEffects, setActiveEffects] = useState<string[]>([])
+  const [activeEffects, setActiveEffects] = useState<Map<string, number>>(new Map())
 
   useEffect(() => {
     const loadLeaderboard = async () => {
@@ -65,8 +64,14 @@ export function GameCanvas() {
       onLevelUpdate: setLevel,
       onLivesUpdate: setLives,
       onWeaponLevelUpdate: setWeaponLevel,
-      onShieldUpdate: setShield,
       onGameOver: () => setGameState("leaderboard-submit"),
+      onBossHealthUpdate: (health, maxHealth) => {
+        setBossHealth(health)
+        setBossMaxHealth(maxHealth)
+      },
+      onActiveEffectsUpdate: (effects) => {
+        setActiveEffects(new Map(effects))
+      },
     })
 
     return () => {
@@ -84,20 +89,7 @@ export function GameCanvas() {
     setLevel(1)
     setLives(3)
     setWeaponLevel(1)
-    setShield(0)
     gameRef.current?.start()
-  }
-
-  const handleNextLevel = () => {
-    gameRef.current?.nextLevel()
-  }
-
-  const handleRestartLevel = () => {
-    gameRef.current?.restartLevel()
-  }
-
-  const handleSkipToBoss = () => {
-    gameRef.current?.skipToBoss()
   }
 
   const handleSubmitScore = async () => {
@@ -237,26 +229,11 @@ export function GameCanvas() {
                 ))}
               </div>
             </div>
-
-            {/* Shield */}
-            <div className="bg-black/90 border-2 border-cyan-400/60 px-2.5 py-1 rounded font-mono text-cyan-400 backdrop-blur-sm shadow-lg text-xs md:text-sm">
-              <div className="text-[8px] md:text-[10px] opacity-60 leading-tight">SHD</div>
-              <div className="flex gap-0.5 mt-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-1 md:w-1.5 h-2.5 md:h-3.5 border border-cyan-400/50 ${
-                      i < shield ? "bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]" : "bg-black/50"
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 
         {bossMaxHealth > 0 && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 pointer-events-none">
+          <div className="absolute top-10 left-1/2 -translate-x-1/2 w-96 pointer-events-none">
             <div className="bg-black/80 border-2 border-red-500 px-4 py-2 rounded">
               <div className="text-red-500 font-mono text-sm mb-2 text-center">BOSS HEALTH</div>
               <div className="w-full h-6 bg-black/50 border border-red-500 rounded overflow-hidden">
@@ -272,17 +249,18 @@ export function GameCanvas() {
           </div>
         )}
 
-        {activeEffects.length > 0 && (
+        {activeEffects.size > 0 && (
           <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-2 pointer-events-none">
-            {activeEffects.map((effect) => (
+            {Array.from(activeEffects.entries()).map(([effect, timeRemaining]) => (
               <div
                 key={effect}
                 className="bg-black/80 border-2 border-yellow-400 px-3 py-1 rounded font-mono text-xs text-yellow-400"
               >
-                {effect === "invincible" && "⭐ INVINCIBLE"}
-                {effect === "speed" && "⚡ SPEED"}
-                {effect === "multiplier" && "✨ 2x SCORE"}
-                {effect === "slowmo" && "⏱ SLOW-MO"}
+                {effect === "invincible" && `⭐ INVINCIBLE ${Math.ceil(timeRemaining)}s`}
+                {effect === "speed" && `⚡ SPEED ${Math.ceil(timeRemaining)}s`}
+                {effect === "multiplier" && `✨ 2x SCORE ${Math.ceil(timeRemaining)}s`}
+                {effect === "slowmo" && `⏱ SLOW-MO ${Math.ceil(timeRemaining)}s`}
+                {effect === "health" && "❤ HEALTH"}
               </div>
             ))}
           </div>
@@ -365,17 +343,23 @@ export function GameCanvas() {
                   <div className="bg-black/50 p-2 border border-red-500">
                     <span className="text-red-500">⚡ WEAPON</span> - Upgrade firepower (Max 5)
                   </div>
-                  <div className="bg-black/50 p-2 border border-green-500">
-                    <span className="text-green-500">🛡 SHIELD</span> - Temporary protection
-                  </div>
                   <div className="bg-black/50 p-2 border border-blue-500">
                     <span className="text-blue-500">🔥 FIRE RATE</span> - Shoot faster
                   </div>
+                  <div className="bg-black/50 p-2 border border-red-500">
+                    <span className="text-red-500">❤ HEALTH</span> - Gain extra life
+                  </div>
                   <div className="bg-black/50 p-2 border border-yellow-500">
-                    <span className="text-yellow-500">⭐ SPREAD</span> - Multi-directional shots
+                    <span className="text-yellow-500">⭐ INVINCIBLE</span> - Immune to damage (8s)
+                  </div>
+                  <div className="bg-black/50 p-2 border border-cyan-500">
+                    <span className="text-cyan-500">⚡ SPEED</span> - Move faster (10s)
                   </div>
                   <div className="bg-black/50 p-2 border border-purple-500">
-                    <span className="text-purple-500">💣 BOMB</span> - Clear screen attack
+                    <span className="text-purple-500">✨ MULTIPLIER</span> - 2x score (15s)
+                  </div>
+                  <div className="bg-black/50 p-2 border border-green-500">
+                    <span className="text-green-500">⏱ SLOW-MO</span> - Slow time (8s)
                   </div>
                 </div>
               </div>
@@ -384,9 +368,11 @@ export function GameCanvas() {
                 <h3 className="text-lg md:text-xl text-yellow-400 mb-2">TIPS</h3>
                 <ul className="list-disc list-inside space-y-1">
                   <li>Enemies drop power-ups when defeated</li>
+                  <li>Bosses drop power-ups at 75%, 50%, and 25% health</li>
                   <li>Bosses have multiple attack patterns - stay alert!</li>
                   <li>Build combo chains for higher scores</li>
                   <li>Your weapons reset after defeating a boss</li>
+                  <li>Combine buffs for maximum effectiveness</li>
                   <li>Keep moving to dodge incoming fire!</li>
                 </ul>
               </div>
@@ -482,47 +468,6 @@ export function GameCanvas() {
           </div>
         )}
       </div>
-
-      {gameState === "playing" && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 md:gap-3 flex-wrap justify-center pointer-events-auto">
-          <Button
-            onClick={togglePause}
-            variant="outline"
-            size="sm"
-            className="bg-black/70 border-cyan-500 text-cyan-400 hover:bg-cyan-500 hover:text-black font-mono text-xs md:text-sm"
-          >
-            <Pause className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-            Pause
-          </Button>
-          <Button
-            onClick={handleRestartLevel}
-            variant="outline"
-            size="sm"
-            className="bg-black/70 border-yellow-500 text-yellow-400 hover:bg-yellow-500 hover:text-black font-mono text-xs md:text-sm"
-          >
-            <RotateCcw className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-            Restart
-          </Button>
-          <Button
-            onClick={handleNextLevel}
-            variant="outline"
-            size="sm"
-            className="bg-black/70 border-green-500 text-green-400 hover:bg-green-500 hover:text-black font-mono text-xs md:text-sm"
-          >
-            <SkipForward className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-            Next
-          </Button>
-          <Button
-            onClick={handleSkipToBoss}
-            variant="outline"
-            size="sm"
-            className="bg-black/70 border-red-500 text-red-400 hover:bg-red-500 hover:text-black font-mono text-xs md:text-sm"
-          >
-            <Zap className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-            Boss
-          </Button>
-        </div>
-      )}
 
       {gameState === "paused" && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 pointer-events-auto">

@@ -29,7 +29,6 @@ export class Game {
   score: number
   level: number
   lives: number
-  bombs: number
   combo: number
   comboTimer: number
 
@@ -57,12 +56,13 @@ export class Game {
 
   // Callbacks for React integration
   private callbacks: {
-    onScoreUpdate: (score: number) => void
-    onLevelUpdate: (level: number) => void
-    onLivesUpdate: (lives: number) => void
-    onWeaponLevelUpdate: (weaponLevel: number) => void
-    onShieldUpdate: (shield: number) => void
-    onGameOver: () => void
+  onScoreUpdate: (score: number) => void
+  onLevelUpdate: (level: number) => void
+  onLivesUpdate: (lives: number) => void
+  onWeaponLevelUpdate: (weaponLevel: number) => void
+  onGameOver: () => void
+    onBossHealthUpdate?: (health: number, maxHealth: number) => void
+    onActiveEffectsUpdate?: (effects: Map<string, number>) => void
   }
 
   constructor(
@@ -73,8 +73,9 @@ export class Game {
       onLevelUpdate: (level: number) => void
       onLivesUpdate: (lives: number) => void
       onWeaponLevelUpdate: (weaponLevel: number) => void
-      onShieldUpdate: (shield: number) => void
       onGameOver: () => void
+      onBossHealthUpdate?: (health: number, maxHealth: number) => void
+      onActiveEffectsUpdate?: (effects: Map<string, number>) => void
     },
   ) {
     this.canvas = canvas
@@ -98,7 +99,6 @@ export class Game {
     this.score = 0
     this.level = 1
     this.lives = 3
-    this.bombs = 3
     this.combo = 0
     this.comboTimer = 0
 
@@ -170,44 +170,11 @@ export class Game {
     this.gameLoop(this.lastTime)
   }
 
-  nextLevel(): void {
-    if (this.waveActive || this.bossActive) {
-      this.waveActive = false
-      this.bossActive = false
-      this.enemies = []
-      this.bosses = []
-      this.enemyProjectiles = []
-    }
-    this.level++
-    this.callbacks.onLevelUpdate(this.level)
-    this.startWave()
-  }
-
-  restartLevel(): void {
-    this.enemies = []
-    this.bosses = []
-    this.projectiles = []
-    this.enemyProjectiles = []
-    this.powerups = []
-    this.particles = []
-    this.waveActive = false
-    this.bossActive = false
-    this.enemiesSpawned = 0
-    this.startWave()
-  }
-
-  skipToBoss(): void {
-    this.level = Math.floor(this.level / 2) * 2 + 2
-    this.callbacks.onLevelUpdate(this.level)
-    this.restartLevel()
-  }
-
   start(shipType: "bullet" | "explosive" | "laser" = "bullet"): void {
     this.running = true
     this.score = 0
     this.level = 1
     this.lives = 3
-    this.bombs = 3
     this.combo = 0
     this.comboTimer = 0
 
@@ -215,7 +182,6 @@ export class Game {
     this.callbacks.onLevelUpdate(this.level)
     this.callbacks.onLivesUpdate(this.lives)
     this.callbacks.onWeaponLevelUpdate(1)
-    this.callbacks.onShieldUpdate(0)
 
     this.lastTime = performance.now()
     this.startWave()
@@ -234,7 +200,6 @@ export class Game {
     this.score = 0
     this.level = 1
     this.lives = 3
-    this.bombs = 3
     this.combo = 0
     this.comboTimer = 0
 
@@ -246,7 +211,6 @@ export class Game {
     this.ui.updateScore(this.score)
     this.ui.updateLevel(this.level)
     this.ui.updateLives(this.lives)
-    this.ui.updateBombs(this.bombs)
 
     this.running = true
     this.startWave()
@@ -258,7 +222,7 @@ export class Game {
     if (isBossLevel) {
       this.ui.showBossWarning()
       setTimeout(() => {
-        this.spawnBoss()
+      this.spawnBoss()
       }, 3000)
     } else {
       this.ui.showLevelTransition(`LEVEL ${this.level} - WAVE`)
@@ -317,11 +281,14 @@ export class Game {
   private update(deltaTime: number): void {
     if (!this.running) return
 
-    this.player.update(deltaTime, this.keys)
-    this.background.update(deltaTime)
+    // Apply time slow factor to deltaTime
+    const adjustedDeltaTime = deltaTime * this.timeSlowFactor
+
+    this.player.update(adjustedDeltaTime, this.keys)
+    this.background.update(adjustedDeltaTime)
 
     if (this.waveActive && !this.bossActive) {
-      this.waveTimer += deltaTime
+      this.waveTimer += adjustedDeltaTime
       if (this.waveTimer > 0.5 && this.enemiesSpawned < this.maxEnemiesPerWave) {
         this.spawnEnemy()
         this.enemiesSpawned++
@@ -338,7 +305,7 @@ export class Game {
     }
 
     for (let i = this.enemies.length - 1; i >= 0; i--) {
-      this.enemies[i].update(deltaTime)
+      this.enemies[i].update(adjustedDeltaTime)
 
       if (this.enemies[i].y > this.height + 100 || this.enemies[i].x < -100 || this.enemies[i].x > this.width + 100) {
         this.enemies.splice(i, 1)
@@ -346,7 +313,7 @@ export class Game {
     }
 
     for (let i = this.bosses.length - 1; i >= 0; i--) {
-      this.bosses[i].update(deltaTime)
+      this.bosses[i].update(adjustedDeltaTime)
 
       if (this.bosses[i].health <= 0) {
         this.defeatBoss(this.bosses[i])
@@ -354,8 +321,16 @@ export class Game {
       }
     }
 
+    // Update boss health UI
+    if (this.bosses.length > 0 && this.callbacks.onBossHealthUpdate) {
+      const boss = this.bosses[0]
+      this.callbacks.onBossHealthUpdate(boss.health, boss.maxHealth)
+    } else if (this.bosses.length === 0 && this.callbacks.onBossHealthUpdate) {
+      this.callbacks.onBossHealthUpdate(0, 0)
+    }
+
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
-      this.projectiles[i].update(deltaTime)
+      this.projectiles[i].update(adjustedDeltaTime)
 
       if (this.projectiles[i].y < -10 || this.projectiles[i].dead) {
         this.projectiles.splice(i, 1)
@@ -363,7 +338,7 @@ export class Game {
     }
 
     for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
-      this.enemyProjectiles[i].update(deltaTime)
+      this.enemyProjectiles[i].update(adjustedDeltaTime)
 
       if (this.enemyProjectiles[i].y > this.height + 10 || this.enemyProjectiles[i].dead) {
         this.enemyProjectiles.splice(i, 1)
@@ -371,7 +346,7 @@ export class Game {
     }
 
     for (let i = this.powerups.length - 1; i >= 0; i--) {
-      this.powerups[i].update(deltaTime)
+      this.powerups[i].update(adjustedDeltaTime)
 
       if (this.powerups[i].y > this.height + 50) {
         this.powerups.splice(i, 1)
@@ -379,7 +354,7 @@ export class Game {
     }
 
     for (let i = this.particles.length - 1; i >= 0; i--) {
-      this.particles[i].update(deltaTime)
+      this.particles[i].update(adjustedDeltaTime)
 
       if (this.particles[i].life <= 0) {
         this.particles.splice(i, 1)
@@ -422,6 +397,11 @@ export class Game {
       } else {
         this.activeEffects.set(effect, newDuration)
       }
+    }
+
+    // Update active effects UI with countdown timers
+    if (this.callbacks.onActiveEffectsUpdate) {
+      this.callbacks.onActiveEffectsUpdate(this.activeEffects)
     }
   }
 
@@ -512,15 +492,12 @@ export class Game {
       const types: Array<
         | "weapon"
         | "firerate"
-        | "spread"
-        | "shield"
-        | "bomb"
         | "health"
         | "invincible"
         | "speed"
         | "multiplier"
         | "slowmo"
-      > = ["weapon", "firerate", "spread", "shield", "bomb", "health", "invincible", "speed", "multiplier", "slowmo"]
+      > = ["weapon", "firerate", "health", "invincible", "speed", "multiplier", "slowmo"]
       const type = types[Math.floor(Math.random() * types.length)]
       this.powerups.push(new Powerup(enemy.x, enemy.y, type))
     }
@@ -540,15 +517,12 @@ export class Game {
       const types: Array<
         | "weapon"
         | "firerate"
-        | "spread"
-        | "shield"
-        | "bomb"
         | "health"
         | "invincible"
         | "speed"
         | "multiplier"
         | "slowmo"
-      > = ["weapon", "firerate", "spread", "shield", "bomb", "health", "invincible", "speed", "multiplier", "slowmo"]
+      > = ["weapon", "firerate", "health", "invincible", "speed", "multiplier", "slowmo"]
       const type = types[Math.floor(Math.random() * types.length)]
       const offsetX = (Math.random() - 0.5) * 60
       const offsetY = (Math.random() - 0.5) * 60
@@ -561,13 +535,6 @@ export class Game {
 
     this.addScreenShake(1)
     this.flash("white", 0.8)
-
-    // Reset weapon and shield after boss
-    this.player.weaponLevel = 1
-    this.player.shield = false
-    this.player.shieldTime = 0
-    this.callbacks.onWeaponLevelUpdate(1)
-    this.callbacks.onShieldUpdate(0)
 
     setTimeout(() => {
       this.level++
@@ -601,16 +568,6 @@ export class Game {
       case "firerate":
         this.player.upgradeFireRate()
         break
-      case "spread":
-        this.player.upgradeSpread()
-        break
-      case "shield":
-        this.player.activateShield()
-        break
-      case "bomb":
-        this.bombs++
-        this.ui.updateBombs(this.bombs)
-        break
       case "health":
         this.lives++
         this.callbacks.onLivesUpdate(this.lives)
@@ -639,41 +596,11 @@ export class Game {
     this.callbacks.onWeaponLevelUpdate(this.player.weaponLevel)
 
     this.createPowerupEffect(powerup.x, powerup.y, powerup.color)
-    this.score += 100 * this.scoreMultiplier
+          this.score += 100 * this.scoreMultiplier
     this.ui.updateScore(this.score)
-    this.callbacks.onScoreUpdate(this.score)
+          this.callbacks.onScoreUpdate(this.score)
   }
 
-  useBomb(): void {
-    if (this.bombs > 0) {
-      this.bombs--
-      this.ui.updateBombs(this.bombs)
-
-      this.enemyProjectiles = []
-
-      for (const e of this.enemies) {
-        e.takeDamage(50)
-        if (e.health <= 0) {
-          this.destroyEnemy(e)
-        }
-      }
-
-      for (const b of this.bosses) {
-        b.takeDamage(100)
-      }
-
-      this.flash("cyan", 0.8)
-      this.addScreenShake(0.8)
-
-      for (let i = 0; i < 100; i++) {
-        const angle = Math.random() * Math.PI * 2
-        const speed = Math.random() * 400 + 200
-        this.particles.push(
-          new Particle(this.width / 2, this.height / 2, Math.cos(angle) * speed, Math.sin(angle) * speed, "#0ff", 1, 8),
-        )
-      }
-    }
-  }
 
   private createExplosion(x: number, y: number, size = 1): void {
     const particleCount = 20 + size * 10

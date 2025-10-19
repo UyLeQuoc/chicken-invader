@@ -18,10 +18,6 @@ export class Player {
   fireRate: number
   fireTimer: number
   weaponLevel: number
-  spreadLevel: number
-  shield: boolean
-  shieldTime: number
-  maxShieldTime: number
   animationFrame: number
   animationTimer: number
   flashTimer: number
@@ -42,10 +38,6 @@ export class Player {
     this.fireRate = 0.15
     this.fireTimer = 0
     this.weaponLevel = 1
-    this.spreadLevel = 0
-    this.shield = false
-    this.shieldTime = 0
-    this.maxShieldTime = 10
     this.animationFrame = 0
     this.animationTimer = 0
     this.flashTimer = 0
@@ -84,13 +76,6 @@ export class Player {
       }
     }
 
-    if (this.shield) {
-      this.shieldTime -= deltaTime
-      if (this.shieldTime <= 0) {
-        this.shield = false
-      }
-    }
-
     this.animationTimer += deltaTime
     if (this.animationTimer > 0.1) {
       this.animationFrame = (this.animationFrame + 1) % 4
@@ -122,7 +107,6 @@ export class Player {
     if (this.weaponLevel >= 5) {
       this.game.projectiles.push(new Projectile(this.x, this.y - 20, 0, -800, damage, this.game, "laser"))
     } else {
-      const spread = this.spreadLevel * 15
       const bulletCount = Math.min(this.weaponLevel, 4)
 
       if (bulletCount === 1) {
@@ -130,13 +114,12 @@ export class Player {
       } else {
         for (let i = 0; i < bulletCount; i++) {
           const offset = (i - (bulletCount - 1) / 2) * 15
-          const angle = ((i - (bulletCount - 1) / 2) * spread * Math.PI) / 180
           this.game.projectiles.push(
             new Projectile(
               this.x + offset,
               this.y - 20,
-              Math.sin(angle) * 600,
-              -Math.cos(angle) * 600,
+              0,
+              -600,
               damage,
               this.game,
             ),
@@ -163,21 +146,7 @@ export class Player {
     this.fireRate = Math.max(0.05, this.fireRate - 0.02)
   }
 
-  upgradeSpread(): void {
-    this.spreadLevel = Math.min(this.spreadLevel + 1, 3)
-  }
-
-  activateShield(): void {
-    this.shield = true
-    this.shieldTime = this.maxShieldTime
-  }
-
   takeDamage(): void {
-    if (this.shield) {
-      this.shield = false
-      this.shieldTime = 0
-      return
-    }
 
     this.invincible = true
     this.invincibleTime = this.maxInvincibleTime
@@ -206,12 +175,13 @@ export class Player {
       ctx.shadowBlur = 20
     }
 
-    if (this.shield) {
+    // Draw shield animation when invincible
+    if (this.invincible) {
       ctx.beginPath()
       ctx.arc(this.x, this.y, 25, 0, Math.PI * 2)
-      ctx.strokeStyle = "#0ff"
+      ctx.strokeStyle = "#ffff00"
       ctx.lineWidth = 3
-      ctx.shadowColor = "#0ff"
+      ctx.shadowColor = "#ffff00"
       ctx.shadowBlur = 15
       ctx.stroke()
 
@@ -222,7 +192,7 @@ export class Player {
         const y = this.y + Math.sin(angle) * 25
         ctx.beginPath()
         ctx.arc(x, y, 3, 0, Math.PI * 2)
-        ctx.fillStyle = "#0ff"
+        ctx.fillStyle = "#ffff00"
         ctx.fill()
       }
     }

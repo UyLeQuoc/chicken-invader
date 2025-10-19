@@ -5,7 +5,6 @@ import { neon } from "@neondatabase/serverless"
 export interface LeaderboardEntry {
   id: number
   name: string
-  ship_type: string
   score: number
   level: number
   wave: number
@@ -28,8 +27,8 @@ export async function submitScore(name: string, score: number, level: number, wa
   try {
     const sql = getSql()
     const result = await sql`
-      INSERT INTO leaderboard (name, ship_type, score, level, wave) 
-      VALUES (${name}, ${"bullet"}, ${score}, ${level}, ${wave}) 
+      INSERT INTO leaderboard (name, score, level, wave) 
+      VALUES (${name}, ${score}, ${level}, ${wave}) 
       RETURNING *
     `
     return (result as LeaderboardEntry[])[0]

@@ -35,18 +35,6 @@ export class Powerup {
         this.color = "#00f"
         this.label = "F"
         break
-      case "spread":
-        this.color = "#ff0"
-        this.label = "S"
-        break
-      case "shield":
-        this.color = "#0f0"
-        this.label = "SH"
-        break
-      case "bomb":
-        this.color = "#f0f"
-        this.label = "B"
-        break
       case "health":
         this.color = "#f00"
         this.label = "HP"
@@ -147,25 +135,6 @@ export class Powerup {
         ctx.fill()
         break
 
-      case "shield":
-        // Shield 🛡
-        ctx.beginPath()
-        ctx.moveTo(0, -8)
-        ctx.lineTo(6, -4)
-        ctx.lineTo(6, 2)
-        ctx.quadraticCurveTo(6, 6, 0, 8)
-        ctx.quadraticCurveTo(-6, 6, -6, 2)
-        ctx.lineTo(-6, -4)
-        ctx.closePath()
-        ctx.stroke()
-        ctx.beginPath()
-        ctx.moveTo(0, -4)
-        ctx.lineTo(0, 6)
-        ctx.moveTo(-4, 0)
-        ctx.lineTo(4, 0)
-        ctx.stroke()
-        break
-
       case "firerate":
         // Fire 🔥
         ctx.beginPath()
@@ -183,41 +152,6 @@ export class Powerup {
         ctx.bezierCurveTo(0, 3, 0, 4, 0, 4)
         ctx.bezierCurveTo(0, 4, 0, 3, 1, 2)
         ctx.bezierCurveTo(2, 0, 2, -3, 0, -4)
-        ctx.fill()
-        break
-
-      case "spread":
-        // Star ⭐
-        const spikes = 5
-        const outerRadius = 8
-        const innerRadius = 3
-        ctx.beginPath()
-        for (let i = 0; i < spikes * 2; i++) {
-          const radius = i % 2 === 0 ? outerRadius : innerRadius
-          const angle = (i * Math.PI) / spikes - Math.PI / 2
-          const x = Math.cos(angle) * radius
-          const y = Math.sin(angle) * radius
-          if (i === 0) ctx.moveTo(x, y)
-          else ctx.lineTo(x, y)
-        }
-        ctx.closePath()
-        ctx.fill()
-        break
-
-      case "bomb":
-        // Bomb 💣
-        ctx.beginPath()
-        ctx.arc(0, 2, 6, 0, Math.PI * 2)
-        ctx.fill()
-        // Fuse
-        ctx.beginPath()
-        ctx.moveTo(-2, -4)
-        ctx.quadraticCurveTo(-4, -6, -3, -8)
-        ctx.stroke()
-        // Spark
-        ctx.fillStyle = "#ff0"
-        ctx.beginPath()
-        ctx.arc(-3, -8, 2, 0, Math.PI * 2)
         ctx.fill()
         break
 
