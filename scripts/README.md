@@ -7,17 +7,17 @@ This folder contains SQL scripts for setting up and migrating the database.
 1. **Create Database Connection**
    - Get your database connection string from [Neon](https://neon.tech) or your PostgreSQL provider
    - Add it to your `.env` file:
-     ```
+     \`\`\`
      DATABASE_URL=postgresql://user:password@host/database
-     ```
+     \`\`\`
 
 2. **Run Database Setup**
    
    **Option A: Using Node.js (Recommended - Already installed!)**
-   ```bash
+   \`\`\`bash
    # Run the migration script
    npm run migrate
-   ```
+   \`\`\`
    
    **Option B: Using Neon SQL Editor (Easiest)**
    1. Go to your Neon project dashboard
@@ -27,9 +27,9 @@ This folder contains SQL scripts for setting up and migrating the database.
    5. Click **Run**
    
    **Option C: Using psql**
-   ```bash
+   \`\`\`bash
    psql $DATABASE_URL -f scripts/setup-database.sql
-   ```
+   \`\`\`
 
 ## Scripts
 
@@ -50,7 +50,7 @@ You can also copy and paste the SQL commands directly into the Neon SQL Editor:
 
 ## Table Structure (After Migrations)
 
-```sql
+\`\`\`sql
 leaderboard (
   id SERIAL PRIMARY KEY,
   name VARCHAR(50) NOT NULL,
@@ -59,10 +59,9 @@ leaderboard (
   wave INTEGER NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
-```
+\`\`\`
 
 ## Indexes
 
 - `idx_leaderboard_score` - For faster sorting by score (DESC)
 - `idx_leaderboard_wave` - For filtering by wave
-
