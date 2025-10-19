@@ -318,25 +318,37 @@ export function GameCanvas() {
         {/* Menu Screen with Leaderboard */}
         {gameState === "menu" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 overflow-y-auto p-4">
-            <h1
-              className="text-6xl md:text-7xl font-bold text-cyan-400 mb-4 animate-pulse"
-              style={{ textShadow: "0 0 20px rgba(6,182,212,0.8)" }}
+            <div 
+              className="mb-8"
+              style={{ 
+                animation: "float 4s ease-in-out infinite",
+                filter: "drop-shadow(0 0 30px rgba(6,182,212,0.8))"
+              }}
             >
-              CHICKEN INVADERS
-            </h1>
-            <p className="text-xl md:text-2xl text-cyan-300 mb-8">A Space Shooter Adventure</p>
-
+              <img 
+                src="/chicken-logo.png" 
+                alt="Chicken Invaders"
+                className="w-64 h-64 md:w-96 md:h-96 object-contain"
+              />
+            </div>
             {leaderboardAvailable && (
               <div className="mb-8 w-full max-w-md">
-                <h2 className="text-2xl font-bold text-yellow-400 mb-4 text-center">TOP 10 SCORES</h2>
-                <div className="bg-black/70 border-2 border-cyan-400/60 rounded p-4 max-h-64 overflow-y-auto">
+                <h2 className="text-2xl font-bold text-yellow-400 mb-4 text-center">TOP 5 SCORES</h2>
+                <div className="bg-black/70 border-2 border-cyan-400/60 rounded p-4">
                   {leaderboard.length > 0 ? (
-                    <div className="space-y-2 font-mono text-sm">
-                      {leaderboard.map((entry, index) => (
+                    <div className="space-y-2 font-mono text-xs">
+                      <div className="flex justify-between items-center text-cyan-400 font-bold pb-2 border-b border-cyan-400/30">
+                        <span className="w-8">#</span>
+                        <span className="flex-1 text-left">NAME</span>
+                        <span className="w-16 text-center">WAVE</span>
+                        <span className="w-20 text-right">SCORE</span>
+                      </div>
+                      {leaderboard.slice(0, 5).map((entry, index) => (
                         <div key={entry.id} className="flex justify-between items-center text-cyan-300">
                           <span className="text-yellow-400 font-bold w-8">#{index + 1}</span>
-                          <span className="flex-1 text-left">{entry.name}</span>
-                          <span className="text-orange-400 w-24 text-right">{entry.score}</span>
+                          <span className="flex-1 text-left truncate">{entry.name}</span>
+                          <span className="text-purple-400 w-16 text-center">{entry.level || 1}</span>
+                          <span className="text-orange-400 w-20 text-right">{entry.score}</span>
                         </div>
                       ))}
                     </div>
